@@ -1,11 +1,8 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
 }
 
 datasource db {
@@ -19,111 +16,91 @@ enum Role {
 }
 
 model User {
-
-  id String @id @default(uuid())
-
-  email String @unique
-
-  password String
-
-  firstName String?
-
-  lastName String?
-
-  role Role
-
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  firstName    String?
+  lastName     String?
+  role         Role
   refreshToken String?
+  isActive     Boolean  @default(true)
 
-  isActive Boolean @default(true)
-
-  createdProducts Product[] @relation("ProductCreator")
+  createdProducts  Product[] @relation("ProductCreator")
+  approvedProducts Product[] @relation("ProductApprover")
+  costedProducts   Product[] @relation("ProductCostingCompleter")
 
   notifications Notification[]
-
-  auditLogs AuditLog[]
+  auditLogs     AuditLog[]
 
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
 
   @@index([email])
-
   @@index([role])
-
   @@map("users")
 }
 
 model Product {
+  id                String        @id @default(uuid())
+  name              String
+  quantity          Int
+  unit              String
+  sku               String?       @unique
+  unitCostPrice     Decimal?      @db.Decimal(10, 2)
+  totalCostPrice    Decimal?      @db.Decimal(10, 2)
+  oldSellingPrice   Decimal?      @db.Decimal(10, 2)
+  investmentFund    Decimal?      @db.Decimal(10, 2)
+  operationProfit   Decimal?      @db.Decimal(10, 2)
+  netProfit         Decimal?      @db.Decimal(10, 2)
+  payrollFund       Decimal?      @db.Decimal(10, 2)
+  otherCosts        Decimal?      @db.Decimal(10, 2)
+  grossProfit       Decimal?      @db.Decimal(10, 2)
+  priceBeforeTax    Decimal?      @db.Decimal(10, 2)
+  minimum4Percent   Decimal?      @db.Decimal(10, 2)
+  minimum20Percent  Decimal?      @db.Decimal(10, 2)
+  finalSellingPrice Decimal?      @db.Decimal(10, 2)
+  printed           Boolean       @default(false)
+  status            ProductStatus
 
-  id                  String      @id @default(uuid())
+  createdById String
+  createdBy   User @relation("ProductCreator", fields: [createdById], references: [id])
 
-  name                String
+  approvedById String?
+  approvedBy   User? @relation("ProductApprover", fields: [approvedById], references: [id])
 
-  quantity            Int
+  costingCompletedById String?
+  costingCompletedBy   User? @relation("ProductCostingCompleter", fields: [costingCompletedById], references: [id])
 
-  unit                String
-
-  sku                 String?     @unique
-
-  unitCostPrice       Decimal?    @db.Decimal(10,2)
-
-  oldSellingPrice     Decimal?    @db.Decimal(10,2)
-
-  minimum4Percent     Decimal?    @db.Decimal(10,2)
-
-  minimum20Percent    Decimal?    @db.Decimal(10,2)
-
-  finalSellingPrice   Decimal?    @db.Decimal(10,2)
-
-  printed             Boolean     @default(false)
-
-  status              ProductStatus
-
-  createdById         String
-
-  createdBy           User @relation("ProductCreator",fields:[createdById],references:[id])
-
-  createdAt           DateTime    @default(now())
-
-  updatedAt           DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([name])
-
   @@index([status])
-
   @@index([sku])
-
   @@index([createdAt])
+  @@map("products")
 }
 
 enum ProductStatus {
-
   PENDING_COSTING
-
   COSTING_COMPLETED
-
   APPROVED
-
   REJECTED
 }
 
 model PricingSetting {
   id String @id @default(uuid())
 
-  // Percent multipliers (store as Decimal percentages like 0.06 = 6%)
-  investmentFundRate   Decimal @db.Decimal(6,4) // IF  = CP * 0.06
-  operationProfitRate  Decimal @db.Decimal(6,4) // OP  = CP * 0.35
-  netProfitRateOfOP    Decimal @db.Decimal(6,4) // NP  = OP * 0.15
+  investmentFundRate        Decimal @db.Decimal(6, 4)
+  operationProfitRate       Decimal @db.Decimal(6, 4)
+  netProfitRateOfOP         Decimal @db.Decimal(6, 4)
+  payrollRateOfOPMinusNP    Decimal @db.Decimal(6, 4)
+  otherCostsRateOfOPMinusNP Decimal @db.Decimal(6, 4)
+  salesTaxRate20            Decimal @db.Decimal(6, 4)
+  salesTaxRate4             Decimal @db.Decimal(6, 4)
 
-  payrollRateOfOPMinusNP     Decimal @db.Decimal(6,4) // Payroll = (OP - NP) * 0.81
-  otherCostsRateOfOPMinusNP  Decimal @db.Decimal(6,4) // Other   = (OP - NP) * 0.19
-
-  salesTaxRate20       Decimal @db.Decimal(6,4) // ST1 = PBT * 0.20
-  salesTaxRate4        Decimal @db.Decimal(6,4) // ST2 = PBT * 0.04
-
-  // Versioning / operational controls
-  name        String?         // e.g. "Default 2026"
-  isActive    Boolean @default(true)
+  name     String?
+  isActive Boolean @default(true)
 
   createdById String?
   createdAt   DateTime @default(now())
@@ -131,70 +108,49 @@ model PricingSetting {
 
   @@index([isActive])
   @@index([createdAt])
+  @@map("pricing_settings")
 }
 
 model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
-  id            String        @id @default(uuid())
-
-  userId         String
-
-  action         String
-
-  entityType     String
-
-  entityId       String
-
-  oldValue       Json?
-
-  newValue       Json?
-
-  ipAddress      String?
-
-  userAgent      String?
-
-  createdAt      DateTime      @default(now())
-
-  user           User @relation(fields:[userId],references:[id])
-                 
+  user User @relation(fields: [userId], references: [id])
 
   @@index([entityType])
-
   @@index([entityId])
-
   @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
 
-  id              String      @id @default(uuid())
-
-  userId          String
-
-  title           String
-
-  message         String
-
-  type            NotificationType
-
-  isRead          Boolean     @default(false)
-
-  createdAt       DateTime    @default(now())
-
-  user            User @relation( fields:[userId], references:[id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
-
   @@index([isRead])
+  @@map("notifications")
 }
 
 enum NotificationType {
-
   PRODUCT_CREATED
-
   COSTING_COMPLETED
-
   PRODUCT_APPROVED
-
+  SELLING_PRICE_CHANGED
   SYSTEM
 }

@@ -1,0 +1,9 @@
+export const AuditAction = {
+  PRODUCT_CREATED: 'PRODUCT_CREATED',
+  COSTING_COMPLETED: 'COSTING_COMPLETED',
+  PRODUCT_APPROVED: 'PRODUCT_APPROVED',
+  SELLING_PRICE_CHANGED: 'SELLING_PRICE_CHANGED',
+  PRICING_SETTINGS_UPDATED: 'PRICING_SETTINGS_UPDATED',
+} as const;
+
+export type AuditActionType = (typeof AuditAction)[keyof typeof AuditAction];

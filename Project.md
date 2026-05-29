@@ -59,6 +59,7 @@ Responsibilities:
 * View all products
 * View logs
 * Modify pricing settings
+* Review calculated outputs
 
 Full system access.
 
@@ -69,9 +70,10 @@ Full system access.
 Responsibilities:
 
 * Create products
+* Add SKU
 * Enter quantity
-* Search inventory
 * View approved prices
+* Add old selling price
 
 Restrictions:
 
@@ -88,10 +90,10 @@ Cannot:
 Responsibilities:
 
 * Enter costing information
-* Add SKU
 * Add unit cost price
-* Add old selling price
-* Review calculated outputs
+* View Product that they have added the unit price of
+* Search inventory
+
 
 Restrictions:
 
@@ -115,6 +117,8 @@ Input:
 * Product Name
 * Quantity
 * Unit
+* Old selling price
+* SKU
 
 Result:
 
@@ -132,9 +136,8 @@ PROCUREMENT
 
 Input:
 
-* SKU
+
 * Unit Cost Price
-* Old Selling Price
 
 Backend performs automatic pricing calculations.
 
@@ -166,6 +169,8 @@ APPROVED
 ---
 
 # Pricing Formula Rules
+
+totalCostPrice = Unit cost price x quantity
 
 CP = Cost Price
 
@@ -284,7 +289,7 @@ JWT Refresh Token
 
 Password Hashing:
 
-argon2
+bcrypt
 
 Authorization:
 
