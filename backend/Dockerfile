@@ -14,8 +14,6 @@ RUN npx prisma generate
 
 RUN npm run build 
 
-RUN npm run prisma:seed
-
 FROM node:22-alpine
 
 WORKDIR /app
