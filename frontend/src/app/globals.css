@@ -1,6 +1,4 @@
 @import 'tailwindcss';
-@import 'ag-grid-community/styles/ag-grid.css';
-@import 'ag-grid-community/styles/ag-theme-quartz.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -61,24 +59,11 @@
   }
 }
 
-.ag-theme-ipmp {
-  --ag-background-color: #ffffff;
-  --ag-header-background-color: #f8fafb;
-  --ag-odd-row-background-color: #fafbfc;
-  --ag-row-hover-color: rgba(15, 171, 187, 0.06);
-  --ag-selected-row-background-color: rgba(15, 171, 187, 0.1);
-  --ag-range-selection-border-color: #0fabbb;
-  --ag-active-color: #0fabbb;
-  --ag-font-family: inherit;
-  --ag-font-size: 13px;
-  --ag-cell-horizontal-border: solid #eef0f2;
-}
-
-.ag-theme-ipmp .ag-cell-inline-editing {
+.spreadsheet-container .ag-cell-inline-editing {
   box-shadow: inset 0 0 0 2px #0fabbb;
 }
 
-.ag-theme-ipmp .ag-cell-invalid {
+.spreadsheet-container .ag-cell-invalid {
   box-shadow: inset 0 0 0 2px #ef4444;
   background-color: rgba(239, 68, 68, 0.05);
 }

@@ -76,6 +76,20 @@ export function buildProcurementColumns(): ColDef<Product>[] {
       valueFormatter: currencyFormatter,
     },
     {
+      field: 'minimum20Percent',
+      headerName: 'Min 20%',
+      editable: false,
+      width: 130,
+      valueFormatter: currencyFormatter,
+    },
+    {
+      field: 'minimum4Percent',
+      headerName: 'Min 4%',
+      editable: false,
+      width: 130,
+      valueFormatter: currencyFormatter,
+    },
+    {
       field: 'status',
       headerName: 'Status',
       editable: false,
@@ -110,7 +124,14 @@ export function buildAdminColumns(
     },
     {
       field: 'minimum20Percent',
-      headerName: 'Min Price',
+      headerName: 'Min 20%',
+      editable: false,
+      width: 120,
+      valueFormatter: currencyFormatter,
+    },
+    {
+      field: 'minimum4Percent',
+      headerName: 'Min 4%',
       editable: false,
       width: 120,
       valueFormatter: currencyFormatter,

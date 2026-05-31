@@ -5,6 +5,10 @@ import { productsApi } from '@/lib/api/endpoints';
 import type { Product } from '@/lib/api/types';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/api/client';
+import {
+  invalidateProductStats,
+  upsertProductInAllListCaches,
+} from '@/lib/products/product-cache';
 
 export const productKeys = {
   all: ['products'] as const,
@@ -22,7 +26,7 @@ export function useProducts(params?: {
   return useQuery({
     queryKey: productKeys.list(params),
     queryFn: async () => {
-      const { data } = await productsApi.list({ limit: 500, ...params });
+      const { data } = await productsApi.list({ limit: 100, ...params });
       return data;
     },
   });
@@ -41,14 +45,15 @@ export function useProductStats() {
 export function useProductMutations() {
   const qc = useQueryClient();
 
-  const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: productKeys.all });
+  const syncProduct = (product: Product) => {
+    upsertProductInAllListCaches(qc, product);
+    invalidateProductStats(qc);
   };
 
   const create = useMutation({
     mutationFn: productsApi.create,
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (response) => {
+      syncProduct(response.data);
       toast.success('Product created');
     },
     onError: (e) => toast.error(getErrorMessage(e)),
@@ -57,20 +62,11 @@ export function useProductMutations() {
   const update = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof productsApi.update>[1] }) =>
       productsApi.update(id, data),
-    onMutate: async ({ id, data }) => {
-      await qc.cancelQueries({ queryKey: productKeys.all });
-      const queries = qc.getQueriesData<{ data: Product[] }>({ queryKey: productKeys.all });
-      queries.forEach(([key, old]) => {
-        if (!old) return;
-        qc.setQueryData(key, {
-          ...old,
-          data: old.data.map((p) => (p.id === id ? { ...p, ...data } : p)),
-        });
-      });
+    onSuccess: (response) => {
+      syncProduct(response.data);
     },
-    onSuccess: invalidate,
     onError: (e) => {
-      invalidate();
+      void qc.invalidateQueries({ queryKey: productKeys.all });
       toast.error(getErrorMessage(e));
     },
   });
@@ -78,8 +74,8 @@ export function useProductMutations() {
   const applyCosting = useMutation({
     mutationFn: ({ id, unitCostPrice }: { id: string; unitCostPrice: number }) =>
       productsApi.applyCosting(id, unitCostPrice),
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (response) => {
+      syncProduct(response.data);
       toast.success('Costing saved');
     },
     onError: (e) => toast.error(getErrorMessage(e)),
@@ -95,8 +91,8 @@ export function useProductMutations() {
       finalSellingPrice: number;
       printed: boolean;
     }) => productsApi.approve(id, finalSellingPrice, printed),
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (response) => {
+      syncProduct(response.data);
       toast.success('Product approved');
     },
     onError: (e) => toast.error(getErrorMessage(e)),
@@ -105,8 +101,8 @@ export function useProductMutations() {
   const reject = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
       productsApi.reject(id, reason),
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (response) => {
+      syncProduct(response.data);
       toast.success('Product rejected');
     },
     onError: (e) => toast.error(getErrorMessage(e)),
@@ -115,15 +111,17 @@ export function useProductMutations() {
   const updatePrinted = useMutation({
     mutationFn: ({ id, printed }: { id: string; printed: boolean }) =>
       productsApi.updatePrinted(id, printed),
-    onSuccess: invalidate,
+    onSuccess: (response) => {
+      syncProduct(response.data);
+    },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
   const updateFinalPrice = useMutation({
     mutationFn: ({ id, finalSellingPrice }: { id: string; finalSellingPrice: number }) =>
       productsApi.updateFinalPrice(id, finalSellingPrice),
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (response) => {
+      syncProduct(response.data);
       toast.success('Final price updated');
     },
     onError: (e) => toast.error(getErrorMessage(e)),

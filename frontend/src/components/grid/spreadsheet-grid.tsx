@@ -1,7 +1,15 @@
 'use client';
 
-import type { ColDef, GridApi, GridReadyEvent, CellValueChangedEvent } from 'ag-grid-community';
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  themeQuartz,
+  type ColDef,
+  type GridReadyEvent,
+  type CellValueChangedEvent,
+} from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
+
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Download, Plus, Search, Columns3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,9 +23,25 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+const ipmpTheme = themeQuartz.withParams({
+  backgroundColor: '#ffffff',
+  headerBackgroundColor: '#f8fafb',
+  oddRowBackgroundColor: '#fafbfc',
+  rowHoverColor: 'rgba(15, 171, 187, 0.06)',
+  selectedRowBackgroundColor: 'rgba(15, 171, 187, 0.1)',
+  rangeSelectionBorderColor: '#0fabbb',
+  accentColor: '#0fabbb',
+  fontFamily: 'inherit',
+  fontSize: 13,
+  columnBorder: { color: '#eef0f2' },
+  wrapperBorder: { color: '#eef0f2' },
+});
+
 export interface SpreadsheetGridProps<T extends { id: string }> {
   rowData: T[];
-  columnDefs: ColDef<T>[];
+  columnDefs: ColDef[];
   loading?: boolean;
   onCellValueChanged?: (event: CellValueChangedEvent<T>) => void | Promise<void>;
   onAddRow?: () => void;
@@ -25,6 +49,8 @@ export interface SpreadsheetGridProps<T extends { id: string }> {
   height?: string;
   className?: string;
   quickFilterPlaceholder?: string;
+  getRowId?: (row: T) => string;
+  emptyMessage?: string;
 }
 
 export function SpreadsheetGrid<T extends { id: string }>({
@@ -37,6 +63,8 @@ export function SpreadsheetGrid<T extends { id: string }>({
   height = 'calc(100vh - 220px)',
   className,
   quickFilterPlaceholder = 'Search...',
+  getRowId,
+  emptyMessage = 'No products yet. Click Add Row to create your first product.',
 }: SpreadsheetGridProps<T>) {
   const gridRef = useRef<AgGridReact<T>>(null);
   const [quickFilter, setQuickFilter] = useState('');
@@ -55,6 +83,14 @@ export function SpreadsheetGrid<T extends { id: string }>({
   const onGridReady = useCallback((e: GridReadyEvent) => {
     e.api.sizeColumnsToFit();
   }, []);
+
+  const resolveRowId = useCallback(
+    (params: { data: T }) => {
+      if (!params.data) return '';
+      return getRowId?.(params.data) ?? params.data.id;
+    },
+    [getRowId],
+  );
 
   const handleExport = () => {
     gridRef.current?.api.exportDataAsCsv({ fileName: 'ipmp-export.csv' });
@@ -126,10 +162,16 @@ export function SpreadsheetGrid<T extends { id: string }>({
         </div>
       </div>
 
-      <div className="spreadsheet-container rounded-xl border border-border shadow-sm">
-        <div className="ag-theme-quartz ag-theme-ipmp" style={{ height, width: '100%' }}>
+      <div className="spreadsheet-container relative rounded-xl border border-border shadow-sm">
+        {rowData.length === 0 && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-6">
+            <p className="max-w-sm text-center text-sm text-muted-foreground">{emptyMessage}</p>
+          </div>
+        )}
+        <div style={{ height, width: '100%' }}>
           <AgGridReact<T>
             ref={gridRef}
+            theme={ipmpTheme}
             rowData={rowData}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
@@ -142,7 +184,8 @@ export function SpreadsheetGrid<T extends { id: string }>({
             rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: true }}
             onGridReady={onGridReady}
             onCellValueChanged={onCellValueChanged}
-            getRowId={(p) => p.data.id}
+            getRowId={resolveRowId}
+            suppressScrollOnNewData
             suppressMovableColumns={false}
             enableCellTextSelection
             ensureDomOrder

@@ -1,8 +1,9 @@
 # IPMP Project Progress Report
 
 **Generated**: May 30, 2026  
+**Last Updated**: May 31, 2026 (grid visibility fixes applied)  
 **Project**: Inventory & Pricing Management Platform  
-**Status**: Early Development - MVP Foundation Complete
+**Status**: Active Development — Spreadsheet workflow operational
 
 ---
 
@@ -10,7 +11,60 @@
 
 The IPMP project is a production-conscious internal business web application designed to digitize an organization's spreadsheet-driven inventory and pricing workflow. The project has a solid foundation with core backend and frontend infrastructure in place, pricing calculations implemented, and database migrations applied.
 
-**Current Phase**: Core functionality implementation with focus on API endpoints, role-based access control, and frontend UI components.
+**Current Phase**: Core functionality implementation with spreadsheet-style product workflow live across Inventory, Procurement, and Admin Workspace. Recent focus: AG Grid integration, inline product lifecycle, and cross-page cache synchronization.
+
+---
+
+## 🆕 Recent Changes (May 31, 2026)
+
+### Grid Visibility & Spreadsheet UX Fixes
+
+- **List API limit**: Frontend `useProducts` now requests `limit: 100` (backend `@Max(100)`); previously `limit: 500` caused validation errors and an empty grid while create/stats still worked.
+- **Error surfacing**: `ProductsLoadError` banner on Inventory, Workspace, and Procurement when product list queries fail.
+- **Draft save trigger**: Inline create runs only when `sku` or `name` is edited and both fields are filled — not when clicking quantity, unit, or price columns.
+- **Row identity after create**: Draft removed before cache upsert; duplicate `_clientRowId` rows deduped; `create` mutation syncs product into all list caches.
+- **Empty grid state**: Overlay message when no rows; procurement costing ignores empty/unchanged `unitCostPrice` edits.
+
+### Spreadsheet Workflow — Production Fixes
+
+Critical fixes to the shared AG Grid spreadsheet used across Inventory, Procurement, and Admin Workspace.
+
+#### AG Grid Integration ✅
+
+- **Module registration (Error #272)**: Registered `AllCommunityModule` in `spreadsheet-grid.tsx` so AG Grid v33 features (pagination, filtering, editing, row selection, CSV export) work correctly.
+- **Theming migration (Error #239)**: Migrated from legacy CSS theme imports to AG Grid v33 Theming API (`themeQuartz.withParams`). Removed `ag-grid.css` / `ag-theme-quartz.css` imports from `globals.css` to eliminate CSS + Theming API conflict.
+
+#### Inline Product Lifecycle ✅
+
+- **Create trigger**: Products persist when the user finishes the **second** of SKU + Product Name (editing price/qty/unit alone does not create).
+- **Stable row identity**: `_clientRowId` mapping prevents AG Grid from losing rows when temp draft IDs are replaced by server UUIDs after create.
+- **Create vs update separation**: After first persist, all subsequent cell edits call **update** — no duplicate creates on Old Selling Price or other fields.
+- **No row disappearance**: Draft rows are promoted to server records in-place; grid no longer resets on mutation.
+
+#### Cross-Table Cache Synchronization ✅
+
+- **New utility**: `frontend/src/lib/products/product-cache.ts` — `upsertProductInAllListCaches()` updates every product list query (including filtered queries like Procurement's `PENDING_COSTING`).
+- **Mutation strategy**: `use-products.ts` mutations now upsert full server responses into TanStack Query cache instead of blanket `invalidateQueries`, avoiding grid refetch flicker.
+- **Visibility**: Newly created products appear immediately across Workspace, Inventory, Procurement, and Admin views.
+
+#### Margin Columns (Min 20% / Min 4%) ✅
+
+- Added **Min 4%** column to Admin Workspace and Procurement grids.
+- Renamed Admin **Min 20%** column for clarity.
+- Unit Cost Price changes now refresh margin columns live via full server response upsert (backend recalculates `minimum20Percent` and `minimum4Percent` on costing/update).
+
+#### New / Updated Frontend Files
+
+| File | Purpose |
+| ---- | ------- |
+| `frontend/src/hooks/use-product-spreadsheet.ts` | **New** — shared draft row, create-on-SKU+name, stable row IDs, cell change routing |
+| `frontend/src/lib/products/product-cache.ts` | **New** — cross-query product cache upsert helpers |
+| `frontend/src/components/grid/spreadsheet-grid.tsx` | AG Grid v33 modules, theming API, stable `getRowId`, `suppressScrollOnNewData` |
+| `frontend/src/hooks/queries/use-products.ts` | Cache-sync mutations (create, update, applyCosting, approve, etc.) |
+| `frontend/src/app/(app)/inventory/page.tsx` | Refactored to use `useProductSpreadsheet` |
+| `frontend/src/app/(app)/workspace/page.tsx` | Refactored to use `useProductSpreadsheet` + admin-specific handlers |
+| `frontend/src/components/grid/product-columns.tsx` | Min 4% column, Min 20% label on admin/procurement grids |
+| `frontend/src/app/globals.css` | Removed legacy AG Grid CSS imports; spreadsheet edit styles scoped to `.spreadsheet-container` |
 
 ---
 
@@ -256,49 +310,51 @@ The IPMP project is a production-conscious internal business web application des
 
 ## 🎨 Frontend Status
 
-### Overall Status: Early Development ⚠️
+### Overall Status: In Progress — Spreadsheet workflow operational ✅
 
-The frontend structure is in place but UI implementation is in progress.
+Core spreadsheet pages are implemented with AG Grid v33, TanStack Query cache sync, and role-based routing. Auth, layout, and supporting pages exist; some areas still need polish.
 
 ### Pages Structure: `src/app/`
 
 #### Auth Routes `(auth)/`
 
-- ✅ `login/` - Login page structure exists
-- ✅ `invite/` - Invitation acceptance page structure exists
-- 📝 Components need implementation
+- ✅ `login/` — Login page
+- ✅ `invite/` — Invitation acceptance page
 
 #### App Routes `(app)/`
 
-- ✅ `dashboard/` - Admin dashboard (folder exists)
-- ✅ `inventory/` - Inventory management (folder exists)
-- ✅ `procurement/` - Procurement costing (folder exists)
-- ✅ `audit/` - Audit logs view (folder exists)
-- ✅ `users/` - User management (folder exists)
-- ✅ `workspace/` - Workspace settings (folder exists)
-- ✅ `pricing/` - Pricing settings (folder exists)
-- 📝 Most components need implementation
+- ✅ `dashboard/` — Admin dashboard
+- ✅ `inventory/` — Inventory spreadsheet (inline product creation, AG Grid)
+- ✅ `procurement/` — Procurement costing spreadsheet (unit cost entry, margin columns)
+- ✅ `workspace/` — Admin unified spreadsheet (full product lifecycle inline)
+- ✅ `audit/` — Audit logs view
+- ✅ `users/` — User management
+- ✅ `pricing/` — Pricing settings
 
 ### Components: `src/components/`
 
-- ✅ `ui/` - shadcn/ui components
-- ✅ `shared/` - Reusable shared components
-- ✅ `grid/` - AG Grid integration components
-- ✅ `layout/` - Layout components (header, sidebar, etc.)
-- ✅ `notifications/` - Notification UI
-- 📝 Status: Basic structure with placeholder implementations
+- ✅ `ui/` — shadcn/ui components
+- ✅ `shared/` — Reusable shared components (status badges, workflow pipeline)
+- ✅ `grid/` — AG Grid spreadsheet (`spreadsheet-grid.tsx`), column defs, approval panel
+- ✅ `layout/` — Layout components (AppShell, header, sidebar)
+- ✅ `notifications/` — Notification UI
 
 ### Hooks: `src/hooks/`
 
-- 📝 Status: Directory exists, content needs review
+- ✅ `queries/use-products.ts` — Product list queries and mutations with cache sync
+- ✅ `queries/use-pricing.ts` — Pricing settings queries
+- ✅ `queries/use-users.ts`, `use-audit.ts`, `use-invitations.ts`, `use-notifications.ts`
+- ✅ `use-product-spreadsheet.ts` — **New** shared spreadsheet row lifecycle (draft → create → update)
 
 ### Utilities: `src/lib/`
 
-- 📝 Status: Directory exists, likely contains API client setup
+- ✅ `api/` — API client, endpoints, types
+- ✅ `products/product-cache.ts` — **New** cross-query product cache upsert helpers
 
 ### Providers: `src/providers/`
 
-- 📝 Status: Directory exists, likely contains context providers
+- ✅ `auth-provider.tsx` — Authentication context
+- ✅ `query-provider.tsx` — TanStack Query provider
 
 ---
 
@@ -358,30 +414,34 @@ The frontend structure is in place but UI implementation is in progress.
 
 ### Step 1: Product Creation ✅
 
-**Role**: INVENTORY  
-**Status**: **✅ Complete**
+**Role**: INVENTORY (also available inline in Admin Workspace)  
+**Status**: **✅ Complete — inline spreadsheet + API**
 
 - ✅ Input: Product Name, Quantity, Unit, Old Selling Price, SKU
+- ✅ Inline create: persists when SKU + Product Name are set
 - ✅ Result: Product created with status `PENDING_COSTING`
 - ✅ API endpoint: `POST /products`
+- ✅ Visible immediately across Inventory, Workspace, Procurement, and Admin grids via shared cache
 
 ### Step 2: Procurement Costing ✅
 
 **Role**: PROCUREMENT  
-**Status**: **✅ Complete**
+**Status**: **✅ Complete — spreadsheet + API**
 
-- ✅ Input: Unit Cost Price
-- ✅ Automatic pricing calculations
+- ✅ Input: Unit Cost Price (editable in procurement spreadsheet)
+- ✅ Automatic pricing calculations (Min 20%, Min 4%, and related fields)
 - ✅ Result: Status updates to `COSTING_COMPLETED`
 - ✅ API endpoint: `PATCH /products/:id/costing`
-- ✅ Pricing formulas all implemented
+- ✅ Margin columns update live in grid after costing save
 
 ### Step 3: Admin Approval ✅
 
 **Role**: ADMIN  
-**Status**: **✅ Complete**
+**Status**: **✅ Complete — workspace spreadsheet + API**
 
 - ✅ Input: Final Selling Price, Printed Status
+- ✅ Inline editing in Admin Workspace spreadsheet
+- ✅ Approval panel and workflow pipeline UI
 - ✅ Result: Product becomes `APPROVED`
 - ✅ API endpoint: `PATCH /products/:id/approve`
 - ✅ Audit logging of approval
@@ -541,51 +601,58 @@ npm run prisma:seed
 9. **Database Schema** - All models with proper relationships
 10. **Security** - Helmet, CORS, rate limiting, bcrypt hashing
 
-### 🎨 Frontend Skeleton
+### 🎨 Frontend — Spreadsheet & Core Pages
 
-- **Page Structure** - All major routes created
-- **Component Framework** - shadcn/ui integration, AG Grid setup
-- **Form & Validation** - react-hook-form + zod configured
-- **Data Fetching** - TanStack Query setup
-- **Authentication** - JWT token handling framework
+- **Page Structure** — All major routes created and wired
+- **Component Framework** — shadcn/ui integration, AG Grid v33 with Theming API
+- **SpreadsheetGrid** — Shared editable grid (search, pagination, column toggle, CSV export, Add Row)
+- **Product Spreadsheet Hook** — Shared create/update lifecycle with stable row IDs and cache sync
+- **Inventory / Procurement / Workspace** — Role-based spreadsheet pages operational
+- **Form & Validation** — react-hook-form + zod configured
+- **Data Fetching** — TanStack Query with cross-query cache upsert for products
+- **Authentication** — JWT token handling, auth provider, protected routes
 
 ---
 
 ## ⚠️ What Needs Completion
 
-### Frontend Implementation 🔴 HIGH PRIORITY
+### Frontend Implementation 🟡 MEDIUM PRIORITY
 
 1. **Authentication Pages**
-   - [ ] Login page UI and logic
-   - [ ] Invitation acceptance page
+   - [x] Login page UI and logic
+   - [x] Invitation acceptance page
    - [ ] Password reset flow (if needed)
 
 2. **Dashboard (ADMIN)**
    - [ ] Overview metrics
-   - [ ] Product approval queue
-   - [ ] User management interface
-   - [ ] Pricing settings configuration
-   - [ ] Audit logs viewer
+   - [x] Product workflow via Workspace spreadsheet
+   - [ ] User management interface polish
+   - [x] Pricing settings configuration page
+   - [x] Audit logs viewer
 
 3. **Inventory Module**
-   - [ ] Product creation form
-   - [ ] Products table with filters/search
-   - [ ] Product detail view
-   - [ ] SKU validation UI
+   - [x] Inline product creation via spreadsheet (Add Row)
+   - [x] Products table with filters/search (AG Grid)
+   - [x] Create on SKU + name; subsequent edits update same record
+   - [ ] Product detail view (standalone)
 
 4. **Procurement Module**
-   - [ ] Costing entry form
-   - [ ] Products awaiting costing
-   - [ ] Pricing preview/calculator
+   - [x] Costing entry via spreadsheet (unit cost price)
+   - [x] Products awaiting costing visible in grid
+   - [x] Min 20% / Min 4% columns update after costing
 
-5. **Shared Features**
-   - [ ] Navigation/sidebar
-   - [ ] Notifications panel
-   - [ ] User profile menu
-   - [ ] Logout functionality
-   - [ ] Error handling & alerts
-   - [ ] Loading states
-   - [ ] Empty state handling
+5. **Admin Workspace**
+   - [x] Unified spreadsheet for full product lifecycle
+   - [x] Approval panel and workflow pipeline
+   - [x] Inline costing, pricing, and approval actions
+
+6. **Shared Features**
+   - [x] Navigation/sidebar (AppShell)
+   - [x] Notifications panel
+   - [x] Logout functionality
+   - [x] Loading states (grid skeleton)
+   - [x] Error handling via mutation toasts
+   - [ ] Empty state handling polish
 
 ### Backend Enhancements 🟡 MEDIUM PRIORITY
 
@@ -674,7 +741,11 @@ project-root/
 │   │   │   └── layout.tsx
 │   │   ├── components/
 │   │   ├── hooks/
+│   │   │   ├── queries/          # TanStack Query hooks
+│   │   │   └── use-product-spreadsheet.ts
 │   │   ├── lib/
+│   │   │   ├── api/
+│   │   │   └── products/         # product-cache.ts
 │   │   └── providers/
 │   └── package.json
 ├── Project.md (Requirements)
@@ -687,21 +758,20 @@ project-root/
 
 ### Immediate (Week 1-2)
 
-1. **Frontend Login & Auth**
-   - Implement login page UI
-   - Setup authentication context
-   - Integrate with backend auth endpoints
-   - Test login/logout flow
+1. **Spreadsheet polish** ✅ (May 31)
+   - [x] AG Grid v33 module registration and theming migration
+   - [x] Stable row identity and create-on-SKU+name lifecycle
+   - [x] Cross-table cache synchronization
+   - [x] Live margin column updates (Min 20%, Min 4%)
 
-2. **Dashboard Skeleton**
-   - Create main layout (header, sidebar, main content)
-   - Implement navigation
-   - Product approval card/list component
+2. **Dashboard & metrics**
+   - [ ] Overview metrics on admin dashboard
+   - [ ] Product stats integration
 
-3. **Inventory Module**
-   - Product creation form
-   - Products table view
-   - Basic filtering
+3. **Inventory / Workspace UX**
+   - [ ] Auto-focus first cell on Add Row
+   - [ ] Empty state messaging when no products exist
+   - [ ] Standalone product detail view (optional)
 
 ### Short-term (Week 3-4)
 
@@ -751,11 +821,12 @@ project-root/
 | Authentication     | ✅ Good      | JWT implementation solid, ready for use        |
 | Authorization      | ✅ Good      | RBAC guards implemented                        |
 | Pricing Engine     | ✅ Excellent | All formulas correctly implemented             |
-| Frontend Structure | ⚠️ Partial   | Routes created, needs UI implementation        |
+| Frontend Structure | ✅ Good      | Spreadsheet workflow live; dashboard metrics pending |
+| Frontend Spreadsheets | ✅ Good   | Inventory, Procurement, Workspace operational       |
 | Testing            | ⚠️ Partial   | Framework ready, tests needed                  |
-| Documentation      | ✅ Good      | Project.md comprehensive, code well-structured |
+| Documentation      | ✅ Good      | Project.md comprehensive, progress.md updated  |
 
-**Overall Health**: 🟢 **GOOD** - Solid foundation, ready for frontend implementation phase
+**Overall Health**: 🟢 **GOOD** — Backend complete, spreadsheet workflow operational on frontend
 
 ---
 
@@ -769,6 +840,6 @@ project-root/
 
 ---
 
-**Last Updated**: May 30, 2026  
+**Last Updated**: May 31, 2026  
 **Status**: Active Development  
 **Maintainer**: Copilot
