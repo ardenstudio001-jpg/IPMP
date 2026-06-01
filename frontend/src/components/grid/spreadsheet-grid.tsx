@@ -11,7 +11,7 @@ import {
 import { AgGridReact } from 'ag-grid-react';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Download, Plus, Search, Columns3 } from 'lucide-react';
+import { Plus, Search, Columns3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -92,10 +92,6 @@ export function SpreadsheetGrid<T extends { id: string }>({
     [getRowId],
   );
 
-  const handleExport = () => {
-    gridRef.current?.api.exportDataAsCsv({ fileName: 'ipmp-export.csv' });
-  };
-
   const toggleColumn = (field: string, visible: boolean) => {
     setHiddenCols((prev) => ({ ...prev, [field]: !visible }));
     gridRef.current?.api.setColumnsVisible([field], visible);
@@ -155,10 +151,6 @@ export function SpreadsheetGrid<T extends { id: string }>({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
         </div>
       </div>
 

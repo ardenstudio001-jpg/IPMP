@@ -9,6 +9,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { ConfigModule } from '@nestjs/config/dist/config.module';
     AuditModule,
     NotificationsModule,
     InvitationsModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

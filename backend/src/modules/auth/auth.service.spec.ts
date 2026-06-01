@@ -79,7 +79,10 @@ describe('AuthService', () => {
       lastName: 'Doe',
     };
 
-    jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed-password' as never);
+    jest
+      .spyOn(bcrypt, 'hash')
+      .mockResolvedValueOnce('hashed-password' as never)
+      .mockResolvedValueOnce('hashed-refresh-token' as never);
     prismaService.user.findUnique.mockResolvedValue(null);
     prismaService.user.create.mockResolvedValue({
       id: 'user-123',
@@ -117,7 +120,7 @@ describe('AuthService', () => {
     });
     expect(prismaService.user.update).toHaveBeenCalledWith({
       where: { id: 'user-123' },
-      data: { refreshToken: 'refresh-token' },
+      data: { refreshToken: 'hashed-refresh-token' },
     });
     expect(response.user.role).toBe(Role.PROCUREMENT);
     expect(response.accessToken).toBe('access-token');

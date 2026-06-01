@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -36,6 +37,14 @@ describe('NotificationsService', () => {
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: RealtimeService,
+          useValue: {
+            emitNotificationsChanged: jest.fn(),
+            emitToUsers: jest.fn(),
+            emitToRoles: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

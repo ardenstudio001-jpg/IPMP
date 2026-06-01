@@ -40,6 +40,12 @@ export class ProductsController {
     return this.productsService.getStats();
   }
 
+  @Get('sku-preview')
+  @Roles(Role.ADMIN, Role.INVENTORY)
+  suggestSku() {
+    return this.productsService.suggestSku();
+  }
+
   @Get()
   findAll(@Query() query: ListProductsQueryDto) {
     return this.productsService.findAll(query);

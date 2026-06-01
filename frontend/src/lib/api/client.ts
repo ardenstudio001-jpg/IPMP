@@ -16,7 +16,9 @@ export const apiClient = axios.create({
 
 let refreshPromise: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(options?: {
+  redirectOnFailure?: boolean;
+}): Promise<string | null> {
   const { refreshToken } = getTokens();
   if (!refreshToken) return null;
 
@@ -31,11 +33,20 @@ async function refreshAccessToken(): Promise<string | null> {
     return data.accessToken;
   } catch {
     clearSession();
-    if (typeof window !== 'undefined') {
+    if (options?.redirectOnFailure !== false && typeof window !== 'undefined') {
       window.location.href = '/login';
     }
     return null;
   }
+}
+
+/** Attempt silent refresh without redirecting (e.g. on app init). */
+export async function tryRefreshSession(): Promise<boolean> {
+  const { accessToken, refreshToken } = getTokens();
+  if (accessToken) return true;
+  if (!refreshToken) return false;
+  const token = await refreshAccessToken({ redirectOnFailure: false });
+  return Boolean(token);
 }
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {

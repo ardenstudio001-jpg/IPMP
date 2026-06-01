@@ -7,7 +7,6 @@ import {
   Table2,
   Calculator,
   Users,
-  Mail,
   ScrollText,
   Package,
   ShoppingCart,
@@ -35,7 +34,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/procurement', label: 'Spreadsheet', icon: ShoppingCart, roles: ['PROCUREMENT'] },
   { href: '/pricing', label: 'Pricing Formula', icon: Calculator, roles: ['ADMIN'] },
   { href: '/users', label: 'Users', icon: Users, roles: ['ADMIN'] },
-  { href: '/invitations', label: 'Invitations', icon: Mail, roles: ['ADMIN'] },
   { href: '/audit', label: 'Audit Logs', icon: ScrollText, roles: ['ADMIN'] },
 ];
 
