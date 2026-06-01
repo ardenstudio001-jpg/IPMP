@@ -10,6 +10,6 @@ function randomSkuSuffix(length = 8): string {
   return result;
 }
 
-export function generateSkuCandidate(prefix = 'PRD'): string {
+export function generateSkuCandidate(prefix = 'SKU'): string {
   return `${prefix}-${randomSkuSuffix(8)}`;
 }
