@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType, Role } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { ListNotificationsQueryDto } from './dto/list-notifications-query.dto';
 
 export interface CreateNotificationParams {
@@ -18,12 +19,16 @@ export interface NotifyUsersParams {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtimeService: RealtimeService,
+  ) {}
 
   async createNotification(params: CreateNotificationParams): Promise<void> {
     await this.prisma.notification.create({
       data: params,
     });
+    this.realtimeService.emitNotificationsChanged([params.userId]);
   }
 
   async notifyUsers(
@@ -43,15 +48,23 @@ export class NotificationsService {
         type: payload.type,
       })),
     });
+    this.realtimeService.emitNotificationsChanged(uniqueIds);
   }
 
   async notifyAdmins(payload: NotifyUsersParams): Promise<void> {
-    const admins = await this.prisma.user.findMany({
-      where: { role: Role.ADMIN, isActive: true },
+    await this.notifyByRoles([Role.ADMIN], payload);
+  }
+
+  async notifyByRoles(
+    roles: Role[],
+    payload: NotifyUsersParams,
+  ): Promise<void> {
+    const users = await this.prisma.user.findMany({
+      where: { role: { in: roles }, isActive: true },
       select: { id: true },
     });
     await this.notifyUsers(
-      admins.map((a) => a.id),
+      users.map((u) => u.id),
       payload,
     );
   }

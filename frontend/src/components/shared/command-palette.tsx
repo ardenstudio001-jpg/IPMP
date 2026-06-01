@@ -15,7 +15,6 @@ const ROUTES: { href: string; label: string; roles: Role[] }[] = [
   { href: '/procurement', label: 'Procurement Spreadsheet', roles: ['PROCUREMENT'] },
   { href: '/pricing', label: 'Pricing Formula', roles: ['ADMIN'] },
   { href: '/users', label: 'User Management', roles: ['ADMIN'] },
-  { href: '/invitations', label: 'Invitations', roles: ['ADMIN'] },
   { href: '/audit', label: 'Audit Logs', roles: ['ADMIN'] },
 ];
 

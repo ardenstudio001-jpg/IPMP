@@ -9,7 +9,7 @@ import { RegisterDto } from './dto/register.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
 import { Role } from '@prisma/client';
@@ -79,15 +79,21 @@ export class AuthService {
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const payload = { sub: userId, email };
     const refreshId = randomBytes(16).toString('hex');
+    const accessExpiresIn = (this.configService.get<string>(
+      'JWT_ACCESS_EXPIRES_IN',
+    ) ?? '1h') as JwtSignOptions['expiresIn'];
+    const refreshExpiresIn = (this.configService.get<string>(
+      'JWT_REFRESH_EXPIRES_IN',
+    ) ?? '24h') as JwtSignOptions['expiresIn'];
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        expiresIn: '15m',
+        expiresIn: accessExpiresIn,
         secret: this.configService.get<string>('JWT_SECRET'),
       }),
       this.jwtService.signAsync(
         { ...payload, refreshId },
         {
-          expiresIn: '7d',
+          expiresIn: refreshExpiresIn,
           secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         },
       ),
@@ -96,14 +102,18 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // Update refresh token in the database
+  // Update refresh token in the database (hashed for secure comparison)
   async updateRefreshToken(
     userId: string,
     refreshToken: string,
   ): Promise<void> {
+    const hashedRefreshToken = await bcrypt.hash(
+      refreshToken,
+      this.SALT_ROUNDS,
+    );
     await this.prisma.user.update({
       where: { id: userId },
-      data: { refreshToken },
+      data: { refreshToken: hashedRefreshToken },
     });
   }
 

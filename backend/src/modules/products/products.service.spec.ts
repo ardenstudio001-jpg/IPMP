@@ -6,6 +6,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PricingService } from '../pricing/pricing.service';
 import { ProductsService } from './products.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 const baseProduct = {
   id: 'product-1',
@@ -76,6 +77,13 @@ describe('ProductsService', () => {
             createNotification: jest.fn(),
             notifyUsers: jest.fn(),
             notifyAdmins: jest.fn(),
+            notifyByRoles: jest.fn(),
+          },
+        },
+        {
+          provide: RealtimeService,
+          useValue: {
+            emitProductChanged: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],

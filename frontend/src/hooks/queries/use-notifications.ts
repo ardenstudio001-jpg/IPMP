@@ -17,7 +17,7 @@ export function useNotifications(unreadOnly = false) {
       const { data } = await notificationsApi.list({ limit: 50, unreadOnly });
       return data;
     },
-    refetchInterval: 60_000,
+    refetchInterval: 120_000,
   });
 }
 

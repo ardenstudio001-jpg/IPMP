@@ -19,7 +19,7 @@ import {
   setTokens,
   setUserInStorage,
 } from '@/lib/auth/session';
-import { getErrorMessage } from '@/lib/api/client';
+import { getErrorMessage, tryRefreshSession } from '@/lib/api/client';
 
 interface AuthContextValue {
   user: User | null;
@@ -50,15 +50,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const init = async () => {
       const stored = getUserFromStorage();
-      const { accessToken } = getTokens();
-      if (!accessToken) {
+      const { accessToken, refreshToken } = getTokens();
+      if (!accessToken && !refreshToken) {
         setIsLoading(false);
         return;
       }
       if (stored) setUser(stored);
       try {
+        if (!accessToken && refreshToken) {
+          const restored = await tryRefreshSession();
+          if (!restored) {
+            setUser(null);
+            return;
+          }
+        }
         await refreshUser();
       } catch {
+        const restored = await tryRefreshSession();
+        if (restored) {
+          try {
+            await refreshUser();
+            return;
+          } catch {
+            // fall through to clear
+          }
+        }
         clearSession();
         setUser(null);
       } finally {

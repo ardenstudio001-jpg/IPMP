@@ -25,14 +25,9 @@ export class RefreshTokenStrategy extends PassportStrategy(
     } as StrategyOptionsWithRequest);
   }
 
-  // validate refresh token
   async validate(req: Request, payload: { sub: string; email: string }) {
-    console.log('RefreshTokenStrategy.validate called');
-    console.log('Payload', { sub: payload.sub, email: payload.email });
-
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      console.log('No authorization header found');
       throw new UnauthorizedException('Refresh token not provided');
     }
 

@@ -15,10 +15,12 @@ import {
 import { AuditAction } from 'src/common/constants/audit-actions';
 import { EntityType } from 'src/common/constants/entity-types';
 import { decimalToString, toDecimal } from 'src/common/utils/decimal.util';
+import { generateSkuCandidate } from 'src/common/utils/sku.util';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PricingService } from '../pricing/pricing.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { ApproveProductDto } from './dto/approve-product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListProductsQueryDto } from './dto/list-products-query.dto';
@@ -72,24 +74,59 @@ export class ProductsService {
     private readonly pricingService: PricingService,
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
-  async create(userId: string, dto: CreateProductDto) {
-    if (dto.sku) {
+  private async broadcastProduct(
+    product: Prisma.ProductGetPayload<{ select: typeof productSelect }>,
+  ) {
+    const formatted = this.formatProduct(product);
+    await this.realtimeService.emitProductChanged(
+      formatted as Record<string, unknown>,
+    );
+    return formatted;
+  }
+
+  async suggestSku(): Promise<{ sku: string }> {
+    const sku = await this.resolveUniqueSku();
+    return { sku };
+  }
+
+  private async resolveUniqueSku(providedSku?: string): Promise<string> {
+    const trimmed = providedSku?.trim();
+    if (trimmed) {
       const existing = await this.prisma.product.findUnique({
-        where: { sku: dto.sku },
+        where: { sku: trimmed },
       });
       if (existing) {
         throw new ConflictException('SKU already exists');
       }
+      return trimmed;
     }
+
+    const maxAttempts = 8;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const candidate = generateSkuCandidate();
+      const existing = await this.prisma.product.findUnique({
+        where: { sku: candidate },
+      });
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    throw new ConflictException('Unable to generate a unique SKU');
+  }
+
+  async create(userId: string, dto: CreateProductDto) {
+    const sku = await this.resolveUniqueSku(dto.sku);
 
     const product = await this.prisma.product.create({
       data: {
         name: dto.name,
         quantity: dto.quantity,
         unit: dto.unit,
-        sku: dto.sku,
+        sku,
         oldSellingPrice: dto.oldSellingPrice
           ? toDecimal(dto.oldSellingPrice)
           : undefined,
@@ -107,7 +144,16 @@ export class ProductsService {
       newValue: this.serializeProduct(product),
     });
 
-    return this.formatProduct(product);
+    await this.notificationsService.notifyByRoles(
+      [Role.PROCUREMENT, Role.ADMIN],
+      {
+        title: 'New product pending costing',
+        message: `${product.name} was added and is ready for costing.`,
+        type: NotificationType.PRODUCT_CREATED,
+      },
+    );
+
+    return this.broadcastProduct(product);
   }
 
   async findAll(query: ListProductsQueryDto) {
@@ -210,7 +256,7 @@ export class ProductsService {
       type: NotificationType.COSTING_COMPLETED,
     });
 
-    return this.formatProduct(updated);
+    return this.broadcastProduct(updated);
   }
 
   async approve(id: string, userId: string, dto: ApproveProductDto) {
@@ -249,7 +295,7 @@ export class ProductsService {
       type: NotificationType.PRODUCT_APPROVED,
     });
 
-    return this.formatProduct(updated);
+    return this.broadcastProduct(updated);
   }
 
   async updateFinalSellingPrice(
@@ -304,7 +350,7 @@ export class ProductsService {
       type: NotificationType.SELLING_PRICE_CHANGED,
     });
 
-    return this.formatProduct(updated);
+    return this.broadcastProduct(updated);
   }
 
   async update(
@@ -390,7 +436,7 @@ export class ProductsService {
       newValue: this.serializeProduct(updated),
     });
 
-    return this.formatProduct(updated);
+    return this.broadcastProduct(updated);
   }
 
   async reject(id: string, userId: string, dto: RejectProductDto) {
@@ -432,7 +478,7 @@ export class ProductsService {
       type: NotificationType.SYSTEM,
     });
 
-    return this.formatProduct(updated);
+    return this.broadcastProduct(updated);
   }
 
   async updatePrinted(id: string, userId: string, dto: UpdatePrintedDto) {
@@ -453,7 +499,7 @@ export class ProductsService {
       newValue: { printed: dto.printed },
     });
 
-    return this.formatProduct(updated);
+    return this.broadcastProduct(updated);
   }
 
   async getStats() {

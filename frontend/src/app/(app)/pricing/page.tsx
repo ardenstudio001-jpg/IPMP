@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { useActivePricing, usePricingMutations } from '@/hooks/queries/use-pricing';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -94,34 +93,26 @@ export default function PricingPage() {
           <CardContent className="space-y-6">
             {FIELDS.map(({ key, label }) => (
               <div key={key} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>{label}</Label>
+                <div className="flex items-center justify-between gap-4">
+                  <Label className="shrink-0">{label}</Label>
                   <span className="text-sm font-medium text-primary">
                     {(rates[key] * 100).toFixed(1)}%
                   </span>
+                  <Input
+                    className="max-w-[120px]"
+                    type="number"
+                    step="0.0001"
+                    min={0}
+                    max={1}
+                    value={rates[key]}
+                    onChange={(e) =>
+                      setRates((prev) => ({
+                        ...prev,
+                        [key]: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                  />
                 </div>
-                <Slider
-                  value={[rates[key] * 100]}
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  onValueChange={([v]) =>
-                    setRates((prev) => ({ ...prev, [key]: v / 100 }))
-                  }
-                />
-                <Input
-                  type="number"
-                  step="0.0001"
-                  min={0}
-                  max={1}
-                  value={rates[key]}
-                  onChange={(e) =>
-                    setRates((prev) => ({
-                      ...prev,
-                      [key]: parseFloat(e.target.value) || 0,
-                    }))
-                  }
-                />
               </div>
             ))}
             <Button onClick={handleSave} disabled={create.isPending} className="w-full">
