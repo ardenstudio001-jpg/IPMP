@@ -6,6 +6,10 @@
         "shadcn@latest",
         "mcp"
       ]
+    },
+    "ag-mcp": {
+      "command": "npx",
+      "args": ["ag-mcp"]
     }
   }
 }
