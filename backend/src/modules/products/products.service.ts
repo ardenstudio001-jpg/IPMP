@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import { AuditAction } from 'src/common/constants/audit-actions';
 import { EntityType } from 'src/common/constants/entity-types';
+import { formatGhsDisplay } from 'src/common/utils/currency.util';
 import { decimalToString, toDecimal } from 'src/common/utils/decimal.util';
 import { generateSkuCandidate } from 'src/common/utils/sku.util';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -291,7 +292,7 @@ export class ProductsService {
     await this.notificationsService.createNotification({
       userId: product.createdById,
       title: 'Product approved',
-      message: `Selling price for ${updated.name} has been approved: ${decimalToString(updated.finalSellingPrice)}`,
+      message: `Selling price for ${updated.name} has been approved: ${formatGhsDisplay(decimalToString(updated.finalSellingPrice))}`,
       type: NotificationType.PRODUCT_APPROVED,
     });
 
@@ -335,8 +336,9 @@ export class ProductsService {
       action: AuditAction.SELLING_PRICE_CHANGED,
       entityType: EntityType.Product,
       entityId: id,
-      oldValue: { finalSellingPrice: oldPrice },
-      newValue: { finalSellingPrice: newPrice },
+      entitySku: product.sku ?? undefined,
+      oldValue: { finalSellingPrice: oldPrice, sku: product.sku },
+      newValue: { finalSellingPrice: newPrice, sku: product.sku },
     });
 
     const recipientIds = [
@@ -346,7 +348,7 @@ export class ProductsService {
 
     await this.notificationsService.notifyUsers(recipientIds, {
       title: 'Selling price changed',
-      message: `Final selling price for ${updated.name} changed from ${oldPrice ?? 'N/A'} to ${newPrice}`,
+      message: `Final selling price for ${updated.name} changed from ${formatGhsDisplay(oldPrice)} to ${formatGhsDisplay(newPrice)}`,
       type: NotificationType.SELLING_PRICE_CHANGED,
     });
 
@@ -495,8 +497,9 @@ export class ProductsService {
       action: AuditAction.PRODUCT_UPDATED,
       entityType: EntityType.Product,
       entityId: id,
-      oldValue: { printed: product.printed },
-      newValue: { printed: dto.printed },
+      entitySku: product.sku ?? undefined,
+      oldValue: { printed: product.printed, sku: product.sku },
+      newValue: { printed: dto.printed, sku: product.sku },
     });
 
     return this.broadcastProduct(updated);

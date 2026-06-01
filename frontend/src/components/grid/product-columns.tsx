@@ -139,7 +139,7 @@ export function buildAdminColumns(
     {
       field: 'finalSellingPrice',
       headerName: 'Final Price',
-      editable: true,
+      editable: (params) => params.data?.status === 'APPROVED',
       width: 120,
       valueFormatter: currencyFormatter,
     },

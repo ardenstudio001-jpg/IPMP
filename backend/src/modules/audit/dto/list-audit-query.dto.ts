@@ -26,4 +26,8 @@ export class ListAuditQueryDto {
   @IsOptional()
   @IsString()
   userId?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

@@ -116,9 +116,11 @@ model PricingSetting {
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String
+  actorEmail String
   action     String
   entityType String
   entityId   String
+  entitySku  String?
   oldValue   Json?
   newValue   Json?
   ipAddress  String?
@@ -129,6 +131,7 @@ model AuditLog {
 
   @@index([entityType])
   @@index([entityId])
+  @@index([entitySku])
   @@index([createdAt])
   @@map("audit_logs")
 }

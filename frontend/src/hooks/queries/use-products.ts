@@ -10,6 +10,7 @@ import {
   upsertProductInAllListCaches,
 } from '@/lib/products/product-cache';
 import { notificationKeys } from '@/hooks/queries/use-notifications';
+import { auditKeys } from '@/hooks/queries/use-audit';
 
 export const productKeys = {
   all: ['products'] as const,
@@ -50,6 +51,7 @@ export function useProductMutations() {
     upsertProductInAllListCaches(qc, product);
     invalidateProductStats(qc);
     void qc.invalidateQueries({ queryKey: notificationKeys.all });
+    void qc.invalidateQueries({ queryKey: auditKeys.all });
   };
 
   const create = useMutation({

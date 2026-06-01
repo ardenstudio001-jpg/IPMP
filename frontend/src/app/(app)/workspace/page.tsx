@@ -21,15 +21,20 @@ export default function WorkspacePage() {
   const [panelOpen, setPanelOpen] = useState(false);
 
   const handleApprove = useCallback(
-    (product: Product) => {
-      const finalPrice = parseFloat(
-        product.finalSellingPrice ?? product.minimum20Percent ?? '0',
+    (product: Product, finalSellingPrice: number) => {
+      approve.mutate(
+        {
+          id: product.id,
+          finalSellingPrice,
+          printed: product.printed,
+        },
+        {
+          onSuccess: (response) => {
+            setSelected(response.data);
+            setPanelOpen(false);
+          },
+        },
       );
-      approve.mutate({
-        id: product.id,
-        finalSellingPrice: finalPrice,
-        printed: product.printed,
-      });
     },
     [approve],
   );
@@ -63,12 +68,15 @@ export default function WorkspacePage() {
         return true;
       }
 
-      if (field === 'finalSellingPrice' && row.status === 'APPROVED') {
-        updateFinalPrice.mutate({
-          id: row.id,
-          finalSellingPrice: parseFloat(String(event.newValue)) || 0,
-        });
-        setSelected(row);
+      if (field === 'finalSellingPrice') {
+        if (row.status === 'APPROVED') {
+          updateFinalPrice.mutate({
+            id: row.id,
+            finalSellingPrice: parseFloat(String(event.newValue)) || 0,
+          });
+          setSelected(row);
+          return true;
+        }
         return true;
       }
 
@@ -104,6 +112,7 @@ export default function WorkspacePage() {
         open={panelOpen}
         onOpenChange={setPanelOpen}
         onApprove={handleApprove}
+        isApproving={approve.isPending}
       />
     </AppShell>
   );

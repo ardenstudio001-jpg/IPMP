@@ -109,6 +109,7 @@ export const auditApi = {
     entityType?: string;
     entityId?: string;
     userId?: string;
+    search?: string;
   }) => apiClient.get<PaginatedResponse<AuditLog>>('/audit', { params }),
 };
 

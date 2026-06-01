@@ -7,6 +7,7 @@ import { useAuditLogs } from '@/hooks/queries/use-audit';
 import { useNotifications } from '@/hooks/queries/use-notifications';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/utils';
+import { getAuditActorEmail } from '@/lib/audit/display';
 import { Package, Clock, CheckCircle, XCircle, Bell, Activity } from 'lucide-react';
 
 function MetricCard({
@@ -81,7 +82,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="font-medium">{log.action.replace(/_/g, ' ')}</p>
                         <p className="text-muted-foreground">
-                          {log.user?.email ?? 'System'} · {log.entityType}
+                          {getAuditActorEmail(log)} · {log.entityType}
                         </p>
                       </div>
                       <span className="shrink-0 text-xs text-muted-foreground">

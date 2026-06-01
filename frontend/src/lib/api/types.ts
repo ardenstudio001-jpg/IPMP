@@ -100,9 +100,11 @@ export interface PricingSetting {
 export interface AuditLog {
   id: string;
   userId: string;
+  actorEmail: string;
   action: string;
   entityType: string;
   entityId: string;
+  entitySku: string | null;
   oldValue: Record<string, unknown> | null;
   newValue: Record<string, unknown> | null;
   createdAt: string;
