@@ -5,12 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth-provider';
 import { connectRealtimeStream } from '@/lib/realtime/realtime-client';
 import { notificationKeys } from '@/hooks/queries/use-notifications';
-import { productKeys } from '@/hooks/queries/use-products';
-import {
-  invalidateProductStats,
-  upsertProductInAllListCaches,
-} from '@/lib/products/product-cache';
-import type { Product } from '@/lib/api/types';
+import { listKeys } from '@/hooks/queries/use-lists';
+import { verificationKeys } from '@/hooks/queries/use-verifications';
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -28,13 +24,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
       void connectRealtimeStream(
         {
-          onProductsChanged: (event) => {
-            if (event.product) {
-              upsertProductInAllListCaches(qc, event.product as Product);
-              invalidateProductStats(qc);
-            } else {
-              void qc.invalidateQueries({ queryKey: productKeys.all });
-            }
+          onListsChanged: () => {
+            void qc.invalidateQueries({ queryKey: listKeys.all });
+          },
+          onListItemsChanged: () => {
+            void qc.invalidateQueries({ queryKey: listKeys.all });
+          },
+          onVerificationsChanged: () => {
+            void qc.invalidateQueries({ queryKey: verificationKeys.all });
           },
           onNotificationsChanged: () => {
             void qc.invalidateQueries({ queryKey: notificationKeys.all });

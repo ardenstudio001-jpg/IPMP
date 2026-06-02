@@ -1,19 +1,23 @@
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { getTokens } from '@/lib/auth/session';
-import type { Product } from '@/lib/api/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-export type RealtimeEventType = 'products.changed' | 'notifications.changed';
+export type RealtimeEventType =
+  | 'lists.changed'
+  | 'list-items.changed'
+  | 'verifications.changed'
+  | 'notifications.changed';
 
 export interface RealtimeEvent {
   type: RealtimeEventType;
-  product?: Product;
 }
 
 export interface RealtimeHandlers {
-  onProductsChanged: (event: RealtimeEvent) => void;
-  onNotificationsChanged: () => void;
+  onListsChanged?: () => void;
+  onListItemsChanged?: () => void;
+  onVerificationsChanged?: () => void;
+  onNotificationsChanged?: () => void;
   onConnectionError?: (error: unknown) => void;
 }
 
@@ -42,10 +46,19 @@ export function connectRealtimeStream(
       if (!message.data) return;
       try {
         const event = JSON.parse(message.data) as RealtimeEvent;
-        if (event.type === 'products.changed') {
-          handlers.onProductsChanged(event);
-        } else if (event.type === 'notifications.changed') {
-          handlers.onNotificationsChanged();
+        switch (event.type) {
+          case 'lists.changed':
+            handlers.onListsChanged?.();
+            break;
+          case 'list-items.changed':
+            handlers.onListItemsChanged?.();
+            break;
+          case 'verifications.changed':
+            handlers.onVerificationsChanged?.();
+            break;
+          case 'notifications.changed':
+            handlers.onNotificationsChanged?.();
+            break;
         }
       } catch {
         // ignore malformed events

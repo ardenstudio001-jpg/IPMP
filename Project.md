@@ -2,496 +2,250 @@
 
 ## Project Overview
 
-This project is a production-conscious internal business web application built to replace an organization's spreadsheet-driven inventory and pricing workflow.
+IPMP digitizes internal inventory and pricing operations using **workflow lists** and a **product catalog master**. Procurement staff build daily lists, move items forward with full history, and inventory staff verify acquired stock.
 
-The current organization uses multiple spreadsheets for:
-
-* Inventory tracking
-* Product costing
-* Pricing calculations
-* Approval workflow
-
-The goal of this system is to centralize operations into a maintainable, scalable web platform.
-
-This is NOT a generic ecommerce application.
-
-This is an internal operational management platform.
+This document reflects the **implemented backend** as of June 2026, including the lightweight naming model for sources, requested-by, and stock-owner fields.
 
 ---
 
-# Core Business Problem
+## Domain Model
 
-Current spreadsheet workflow causes:
+```txt
+Product (catalog)
+    ↓
+WorkflowList (PROCUREMENT | PURCHASE | ACQUIRED)
+    ↓
+ListItem (qty, pricing, status, lineage)
+    ├── ListItemParty[] (name + role)
+    └── parentItemId → lineage chain
+```
 
-* Data duplication
-* Human calculation errors
-* Formula instability
-* No auditability
-* Poor collaboration
-* No role isolation
-* Scaling difficulties
+### Product
 
-The application must preserve the existing operational workflow while digitizing it.
+Master data only: `sku`, `name`, `imageUrl`, `categoryId`, `procurementType`, `productDetails`, `description`, `unit`.
 
----
+No workflow status, quantity, or pricing on the product row.
 
-# Primary User Roles
+### ListItem
 
-The system currently uses a simplified RBAC approach.
+Workflow context for one product on one list:
 
-Authorization strategy:
+- Pricing: `quantity`, `costPrice`, `regularPrice`, `salesPrice`, `minimum20`, `minimum4`, `finalSellingPrice`
+- Status: `ACTIVE` | `REMOVED` | `VERIFIED`
+- Lineage: `parentItemId` (copy-on-move, never delete upstream rows)
+- Parties: multiple names per role (see below)
 
-* Role Enum
-* User.role
-* NestJS Role Guards
+### ListItemParty (lightweight names)
 
-No database-driven permissions system for MVP.
+Unified storage for three business concepts that only need **user-entered names**:
 
-## Roles
+| Role | Meaning | Typical list types |
+|------|---------|-------------------|
+| `SOURCE` | Who we buy from | All stages |
+| `REQUESTED_BY` | Who requested the item | Procurement, purchase |
+| `STOCK_OWNER` | Who owns stock after acquisition | Acquired |
 
-### ADMIN
-
-Responsibilities:
-
-* Create users
-* Manage access
-* Approve products
-* View all products
-* View logs
-* Modify pricing settings
-* Review calculated outputs
-
-Full system access.
-
----
-
-### INVENTORY
-
-Responsibilities:
-
-* Create products
-* Add SKU
-* Enter quantity
-* View approved prices
-* Add old selling price
-
-Restrictions:
-
-Cannot:
-
-* Approve products
-* Manage users
-* Edit pricing settings
-
----
-
-### PROCUREMENT
-
-Responsibilities:
-
-* Enter costing information
-* Add unit cost price
-* View Product that they have added the unit price of
-* Search inventory
-
-
-Restrictions:
-
-Cannot:
-
-* Approve products
-* Manage users
-
----
-
-# Workflow Architecture
-
-## Step 1 — Product Creation
-
-Role:
-
-INVENTORY
-
-Input:
-
-* Product Name
-* Quantity
-* Unit
-* Old selling price
-* SKU
-
-Result:
-
-Product status:
-
-PENDING_COSTING
-
----
-
-## Step 2 — Procurement Costing
-
-Role:
-
-PROCUREMENT
-
-Input:
-
-
-* Unit Cost Price
-
-Backend performs automatic pricing calculations.
-
-Result:
-
-Status:
-
-COSTING_COMPLETED
-
----
-
-## Step 3 — Admin Approval
-
-Role:
-
-ADMIN
-
-Input:
-
-* Final Selling Price
-* Printed Status
-
-Result:
-
-Product becomes:
-
-APPROVED
-
----
-
-# Pricing Formula Rules
-
-totalCostPrice = Unit cost price x quantity
-
-CP = Cost Price
-
-Investment Fund:
-
-IF = 6% × CP
-
-Operation Profit:
-
-OP = 35% × CP
-
-Net Profit:
-
-NP = 15% × OP
-
-Payroll Fund:
-
-Payroll = 81% × (OP − NP)
-
-Other Costs:
-
-Other = 19% × (OP − NP)
-
-Gross Profit:
-
-GP2 = IF + OP
-
-Price Before Tax:
-
-PBT = CP + GP2
-
-Sales Tax 20%:
-
-ST1 = PBT × 20%
-
-Minimum Selling Price @20%:
-
-Minimum20 = PBT + ST1
-
-Sales Tax 4%:
-
-ST2 = PBT × 4%
-
-Minimum Selling Price @4%:
-
-Minimum4 = PBT + ST2
-
-Pricing formulas should be implemented inside backend services.
-
-Pricing settings should be configurable through a PricingSetting table.
-
----
-
-# Tech Stack
-
-## Frontend
-
-Framework:
-
-Next.js
-
-Language:
-
-TypeScript
-
-UI:
-
-TailwindCSS
-shadcn/ui
-
-Tables:
-
-AG Grid
-
-Server State:
-
-TanStack Query
-
-URL State:
-
-nuqs
-
-Forms:
-
-react-hook-form
-zod
-
-HTTP:
-
-axios
-
----
-
-## Backend
-
-Framework:
-
-NestJS
-
-Language:
-
-TypeScript
-
-ORM:
-
-Prisma
-
-Database:
-
-PostgreSQL
-
-Authentication:
-
-JWT Access Token
-JWT Refresh Token
-
-Password Hashing:
-
-bcrypt
-
-Authorization:
-
-NestJS Role Guards
-
-Validation:
-
-class-validator
-class-transformer
-
-Security:
-
-Helmet
-Rate Limiting
-CORS
-
----
-
-# Database Design
-
-## User Role Enum
-
-```ts
-enum Role {
-  ADMIN
-  INVENTORY
-  PROCUREMENT
+```prisma
+model ListItemParty {
+  id         String
+  listItemId String
+  name       String    // free text only
+  role       PartyRole
+  createdAt  DateTime
 }
+```
+
+**Intentionally not modeled (deferred):**
+
+- Supplier registry, addresses, contacts
+- Organization/branch master data
+- `sourceId` / `requesterId` selection workflows
+
+**Rationale:** Operations today are name-driven (spreadsheet-style). A single `ListItemParty` table avoids duplicate modules (`Requester`, `StockOwner`, `Source`) while keeping queryable, copyable rows for workflow moves.
+
+### Multiple names per item
+
+One list item may have many sources and many requested-by (or stock-owner) names:
+
+```txt
+Cooking Oil
+  sources:      ABC Supplier, XYZ Imports
+  requestedBy:  Spintex Branch, Wholesale Client
+```
+
+Acquired example:
+
+```txt
+Basketball Pump
+  stockOwner: Main Warehouse, Tema Warehouse, Airport Branch
+```
+
+Names are trimmed and deduplicated case-insensitively on write.
+
+---
+
+## Workflow Lifecycle
+
+### Procurement list
+
+Staff create `WorkflowList` (`type: PROCUREMENT`) and add items with optional `sources` and `requestedBy` name arrays.
+
+### Purchase list
+
+`POST /list-items/move-to-purchase` copies items; **all party rows copy with the same roles**. Procurement rows stay unchanged.
+
+### Acquired list
+
+`POST /list-items/move-to-acquired` copies items and:
+
+- Preserves `SOURCE` names
+- Sets `STOCK_OWNER` from prior `REQUESTED_BY` names (and any existing `STOCK_OWNER` on the purchase item)
+
+This matches the business rule: “requested by” on early lists becomes “stock owner” after acquisition.
+
+### Rollback
+
+Soft-remove (`REMOVED`) on purchase or acquired items only. Upstream list items remain `ACTIVE`.
+
+### Inventory verification
+
+`InventoryVerification` on acquired `ListItem`s; mismatch statuses notify admins.
+
+---
+
+## Historical Preservation
+
+Moving forward **creates new `ListItem` rows** linked via `parentItemId`. Prior lists retain their items and party names forever.
+
+Example:
+
+| List | Items |
+|------|-------|
+| Procurement | Pump, Rice, Milk |
+| Purchase | Pump, Rice |
+| Acquired | Pump |
+
+---
+
+## API Contract
+
+### Create list item
+
+`POST /lists/:listId/items` (procurement lists only)
+
+```json
+{
+  "productId": "optional-existing",
+  "name": "Cooking Oil",
+  "categoryId": "...",
+  "procurementType": "LOCAL",
+  "unit": "L",
+  "quantity": 20,
+  "costPrice": 10,
+  "sources": ["ABC Supplier", "China Vendor"],
+  "requestedBy": ["Spintex Branch", "Wholesale Client"]
+}
+```
+
+### Update list item
+
+`PATCH /list-items/:id`
+
+Any of `sources`, `requestedBy`, `stockOwner` arrays **replaces** that role’s names when sent. Pricing and quantity fields update as before.
+
+### Response
+
+```json
+{
+  "id": "...",
+  "quantity": 20,
+  "product": { "name": "Cooking Oil", "sku": "..." },
+  "sources": ["ABC Supplier", "XYZ Vendor"],
+  "requestedBy": ["Spintex Branch"],
+  "stockOwner": []
+}
+```
+
+Internal `parties` relation is flattened in `formatListItem()` — clients never see raw party row IDs.
+
+### Removed endpoints
+
+- `GET/POST/PATCH /requesters`
+- `GET/POST/PATCH /stock-owners`
+
+Use list item payloads instead.
+
+---
+
+## Pricing
+
+`PricingService.calculatePricing(unitCostPrice, quantity)` fills `minimum20` / `minimum4` on list items when `costPrice` is set. Active rates live in `PricingSetting` (seeded defaults: 6% IF, 35% OP, etc.).
+
+`regularPrice`, `salesPrice`, `finalSellingPrice` remain manual commercial fields.
+
+---
+
+## Authorization
+
+| Capability | ADMIN | PROCUREMENT | INVENTORY |
+|------------|:-----:|:-----------:|:---------:|
+| Lists + items + moves + rollback | ✓ | ✓ | ✗ |
+| View acquired lists / items | ✓ | ✓ | ✓ |
+| Verify acquired items | ✓ | ✗ | ✓ |
+| Categories write | ✓ | ✗ | ✗ |
+| Users / audit / pricing admin | ✓ | ✗ | ✗ |
+
+---
+
+## Audit & Notifications
+
+Workflow events log JSON snapshots including `sources` / `requestedBy` / `stockOwner` arrays on list items.
+
+Notification types: `PROCUREMENT_LIST_CREATED`, `ITEM_MOVED_TO_PURCHASE`, `ACQUIRED_LIST_READY`, `VERIFICATION_MISMATCH`, etc.
+
+SSE: `lists.changed`, `list-items.changed`, `verifications.changed`.
+
+---
+
+## Request Flow
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant API as ListItemsService
+  participant DB as PostgreSQL
+
+  Client->>API: POST /lists/:id/items with sources[] requestedBy[]
+  API->>DB: ListItem + ListItemParty rows
+  Client->>API: POST /list-items/move-to-purchase
+  API->>DB: copy item + copy parties same_roles
+  Client->>API: POST /list-items/move-to-acquired
+  API->>DB: copy item + parties to_acquired
 ```
 
 ---
 
-## Tables
+## Schema & Migrations
 
-### users
-
-Stores:
-
-* authentication
-* identity
-* authorization role
-
-Fields:
-
-* id
-* email
-* password
-* firstName
-* lastName
-* role
-* hashedRefreshToken
-* isActive
-* createdAt
-* updatedAt
+- Authoritative: [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma)
+- `20260602120000_list_based_procurement`
+- `20260603120000_lightweight_list_item_parties` — migrates old `requesters` / `stock_owners` FKs into parties, then drops those tables
 
 ---
 
-### products
+## Tech Stack
 
-Stores:
+**Backend:** NestJS 11, Prisma 7, PostgreSQL, class-validator  
 
-* product information
-* costing data
-* pricing outputs
-* workflow status
-
-Product lifecycle:
-
-PENDING_COSTING
-COSTING_COMPLETED
-APPROVED
-REJECTED
+**Frontend:** Next.js (pending update for list API + party name fields)
 
 ---
 
-### pricing_settings
+## Implementation Notes for Future Normalization
 
-Stores configurable pricing percentages.
+When supplier or branch registry is required:
 
-Fields:
+- Introduce optional `externalId` on `ListItemParty` without breaking name-only clients
+- Or link parties to master tables while keeping `name` as display snapshot
 
-* investmentFundRate
-* operationProfitRate
-* netProfitRateOfOP
-* payrollRateOfOPMinusNP
-* otherCostsRateOfOPMinusNP
-* salesTaxRate20
-* salesTaxRate4
-* isActive
-
----
-
-### audit_logs
-
-Tracks operational changes.
-
-Examples:
-
-* Product created
-* Pricing updated
-* User deactivated
-* Approval completed
-
-Stores:
-
-* userId
-* action
-* entityType
-* entityId
-* oldValue
-* newValue
-* createdAt
-
----
-
-### notifications
-
-Stores system notifications.
-
-Examples:
-
-* Product created
-* Costing completed
-* Product approved
-
----
-
-# Backend Module Structure
-
-src/
-
-auth/
-users/
-products/
-pricing/
-audit/
-notifications/
-common/
-
----
-
-# API Design Philosophy
-
-RESTful API structure.
-
-Examples:
-
-POST /auth/login
-
-POST /users
-
-GET /products
-
-PATCH /products/:id/costing
-
-PATCH /products/:id/approve
-
----
-
-# Coding Expectations
-
-Follow:
-
-* clean architecture principles
-* modular NestJS structure
-* DTO validation
-* service/controller separation
-* repository via Prisma service
-* reusable frontend components
-* strong TypeScript typing
-* scalable folder organization
-
-Avoid:
-
-* overengineering
-* unnecessary abstraction
-* premature microservices
-* database-driven permissions for MVP
-
----
-
-# Development Principles
-
-The project prioritizes:
-
-* maintainability
-* production readiness
-* scalability
-* clear separation of concerns
-* MVP-first implementation
-
-The architecture should remain simple enough for fast delivery while leaving room for future expansion.
-
-Potential future expansion:
-
-* dynamic permissions
-* analytics
-* notifications
-* supplier management
-* multi-warehouse
-* reporting
-* advanced pricing engine
-* real-time updates
-
-Use production-conscious patterns but avoid unnecessary enterprise complexity during MVP.
+Current design optimizes for speed of entry and multi-value lists, not master-data governance.

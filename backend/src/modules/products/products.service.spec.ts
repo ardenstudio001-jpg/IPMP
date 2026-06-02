@@ -1,39 +1,23 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ProductStatus } from '@prisma/client';
-import { AuditService } from '../audit/audit.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { PricingService } from '../pricing/pricing.service';
-import { ProductsService } from './products.service';
+import { ProcurementType } from '@prisma/client';
+import { AuditAction } from 'src/common/constants/audit-actions';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { RealtimeService } from '../realtime/realtime.service';
+import { AuditService } from '../audit/audit.service';
+import { ProductsService } from './products.service';
 
-const baseProduct = {
-  id: 'product-1',
-  name: 'Basketball',
-  quantity: 10,
+const mockProduct = {
+  id: 'prod-1',
+  sku: 'SKU-001',
+  name: 'Pump',
+  imageUrl: null,
+  categoryId: 'cat-1',
+  procurementType: ProcurementType.LOCAL,
+  productDetails: null,
+  description: null,
   unit: 'pcs',
-  sku: 'BB-001',
-  unitCostPrice: null,
-  totalCostPrice: null,
-  oldSellingPrice: null,
-  investmentFund: null,
-  operationProfit: null,
-  netProfit: null,
-  payrollFund: null,
-  otherCosts: null,
-  grossProfit: null,
-  priceBeforeTax: null,
-  minimum4Percent: null,
-  minimum20Percent: null,
-  finalSellingPrice: null,
-  printed: false,
-  status: ProductStatus.PENDING_COSTING,
-  createdById: 'user-1',
-  approvedById: null,
-  costingCompletedById: null,
   createdAt: new Date(),
-  updatedAt: new Date(),
+  category: { id: 'cat-1', name: 'General', createdAt: new Date() },
 };
 
 describe('ProductsService', () => {
@@ -41,82 +25,69 @@ describe('ProductsService', () => {
   let prisma: {
     product: {
       findUnique: jest.Mock;
+      create: jest.Mock;
       findMany: jest.Mock;
       count: jest.Mock;
-      create: jest.Mock;
       update: jest.Mock;
     };
   };
+  let auditService: { logAction: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
       product: {
         findUnique: jest.fn(),
+        create: jest.fn(),
         findMany: jest.fn(),
         count: jest.fn(),
-        create: jest.fn(),
         update: jest.fn(),
       },
     };
+    auditService = { logAction: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProductsService,
         { provide: PrismaService, useValue: prisma },
-        {
-          provide: PricingService,
-          useValue: { calculatePricing: jest.fn() },
-        },
-        {
-          provide: AuditService,
-          useValue: { logAction: jest.fn() },
-        },
-        {
-          provide: NotificationsService,
-          useValue: {
-            createNotification: jest.fn(),
-            notifyUsers: jest.fn(),
-            notifyAdmins: jest.fn(),
-            notifyByRoles: jest.fn(),
-          },
-        },
-        {
-          provide: RealtimeService,
-          useValue: {
-            emitProductChanged: jest.fn().mockResolvedValue(undefined),
-          },
-        },
+        { provide: AuditService, useValue: auditService },
       ],
     }).compile();
 
-    service = module.get<ProductsService>(ProductsService);
+    service = module.get(ProductsService);
   });
 
-  it('applyCosting rejects when status is not PENDING_COSTING', async () => {
-    prisma.product.findUnique.mockResolvedValue({
-      ...baseProduct,
-      status: ProductStatus.APPROVED,
+  it('creates a catalog product', async () => {
+    prisma.product.findUnique.mockResolvedValue(null);
+    prisma.product.create.mockResolvedValue(mockProduct);
+
+    const result = await service.create('user-1', {
+      name: 'Pump',
+      categoryId: 'cat-1',
+      procurementType: ProcurementType.LOCAL,
+      unit: 'pcs',
     });
 
-    await expect(
-      service.applyCosting('product-1', 'user-2', { unitCostPrice: 5 }),
-    ).rejects.toThrow(BadRequestException);
+    expect(result.sku).toBeDefined();
+    expect(auditService.logAction).toHaveBeenCalledWith(
+      expect.objectContaining({ action: AuditAction.PRODUCT_CREATED }),
+    );
   });
 
-  it('approve rejects when status is not COSTING_COMPLETED', async () => {
-    prisma.product.findUnique.mockResolvedValue(baseProduct);
-
-    await expect(
-      service.approve('product-1', 'admin-1', {
-        finalSellingPrice: 70,
-        printed: true,
-      }),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it('findOne throws NotFoundException when missing', async () => {
+  it('throws when product not found', async () => {
     prisma.product.findUnique.mockResolvedValue(null);
-
     await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws on duplicate SKU', async () => {
+    prisma.product.findUnique.mockResolvedValue(mockProduct);
+    await expect(
+      service.create('user-1', {
+        sku: 'SKU-001',
+        name: 'Pump',
+        categoryId: 'cat-1',
+        procurementType: ProcurementType.LOCAL,
+        unit: 'pcs',
+      }),
+    ).rejects.toThrow(ConflictException);
   });
 });

@@ -1,43 +1,44 @@
-import { Type } from 'class-transformer';
+import { ProcurementType } from '@prisma/client';
 import {
-  IsInt,
-  IsNumber,
+  IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
-  Min,
-  MinLength,
+  IsUrl,
+  MaxLength,
 } from 'class-validator';
 
 export class UpdateProductDto {
   @IsOptional()
   @IsString()
-  sku?: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
+  @MaxLength(200)
   name?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  quantity?: number;
+  @IsUrl()
+  imageUrl?: string;
 
   @IsOptional()
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
+  categoryId?: string;
+
+  @IsOptional()
+  @IsEnum(ProcurementType)
+  procurementType?: ProcurementType;
+
+  @IsOptional()
+  @IsString()
+  productDetails?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(40)
   unit?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  oldSellingPrice?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  unitCostPrice?: number;
 }

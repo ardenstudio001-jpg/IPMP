@@ -1,19 +1,42 @@
-import type { ProductStatus } from '@/lib/api/types';
-import { STATUS_LABELS } from '@/lib/api/types';
+import type { ListItemStatus, VerificationStatus } from '@/lib/api/types';
+import {
+  LIST_ITEM_STATUS_LABELS,
+  VERIFICATION_STATUS_LABELS,
+} from '@/lib/api/types';
 import { Badge } from '@/components/ui/badge';
 
-const STATUS_VARIANT: Record<
-  ProductStatus,
-  'warning' | 'default' | 'success' | 'danger'
+const LIST_ITEM_VARIANT: Record<
+  ListItemStatus,
+  'warning' | 'default' | 'success' | 'danger' | 'muted'
 > = {
-  PENDING_COSTING: 'warning',
-  COSTING_COMPLETED: 'default',
-  APPROVED: 'success',
-  REJECTED: 'danger',
+  ACTIVE: 'default',
+  REMOVED: 'muted',
+  VERIFIED: 'success',
 };
 
-export function StatusBadge({ status }: { status: ProductStatus }) {
+const VERIFICATION_VARIANT: Record<
+  VerificationStatus,
+  'warning' | 'default' | 'success' | 'danger' | 'muted'
+> = {
+  PENDING: 'warning',
+  MATCHED: 'success',
+  PARTIAL: 'default',
+  MISSING: 'danger',
+  DAMAGED: 'danger',
+};
+
+export function ListItemStatusBadge({ status }: { status: ListItemStatus }) {
   return (
-    <Badge variant={STATUS_VARIANT[status]}>{STATUS_LABELS[status]}</Badge>
+    <Badge variant={LIST_ITEM_VARIANT[status]}>
+      {LIST_ITEM_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+export function VerificationStatusBadge({ status }: { status: VerificationStatus }) {
+  return (
+    <Badge variant={VERIFICATION_VARIANT[status]}>
+      {VERIFICATION_STATUS_LABELS[status]}
+    </Badge>
   );
 }

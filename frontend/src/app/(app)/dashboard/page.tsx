@@ -2,13 +2,13 @@
 
 import { AppShell } from '@/components/layout/app-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useProductStats } from '@/hooks/queries/use-products';
+import { useLists } from '@/hooks/queries/use-lists';
 import { useAuditLogs } from '@/hooks/queries/use-audit';
 import { useNotifications } from '@/hooks/queries/use-notifications';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/utils';
 import { getAuditActorEmail } from '@/lib/audit/display';
-import { Package, Clock, CheckCircle, XCircle, Bell, Activity } from 'lucide-react';
+import { ClipboardList, ShoppingBag, PackageCheck, Bell, Activity } from 'lucide-react';
 
 function MetricCard({
   title,
@@ -39,7 +39,20 @@ function MetricCard({
 }
 
 export default function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useProductStats();
+  const { data: procurement, isLoading: pLoading } = useLists({
+    type: 'PROCUREMENT',
+    limit: 1,
+  });
+  const { data: purchase, isLoading: puLoading } = useLists({
+    type: 'PURCHASE',
+    limit: 1,
+  });
+  const { data: acquired, isLoading: aLoading } = useLists({
+    type: 'ACQUIRED',
+    limit: 1,
+  });
+  const statsLoading = pLoading || puLoading || aLoading;
+
   const { data: audit, isLoading: auditLoading } = useAuditLogs({ limit: 10 });
   const { data: notifications, isLoading: notifLoading } = useNotifications(true);
 
@@ -48,14 +61,27 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Operational Overview</h2>
-          {/* <p className="text-muted-foreground">Clean executive control center</p> */}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard title="Total Products" value={stats?.total ?? 0} icon={Package} loading={statsLoading} />
-          <MetricCard title="Pending Costing" value={stats?.pendingCosting ?? 0} icon={Clock} loading={statsLoading} />
-          <MetricCard title="Approved Products" value={stats?.approved ?? 0} icon={CheckCircle} loading={statsLoading} />
-          <MetricCard title="Rejected Products" value={stats?.rejected ?? 0} icon={XCircle} loading={statsLoading} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MetricCard
+            title="Procurement Lists"
+            value={procurement?.meta.total ?? 0}
+            icon={ClipboardList}
+            loading={statsLoading}
+          />
+          <MetricCard
+            title="Purchase Lists"
+            value={purchase?.meta.total ?? 0}
+            icon={ShoppingBag}
+            loading={statsLoading}
+          />
+          <MetricCard
+            title="Acquired Lists"
+            value={acquired?.meta.total ?? 0}
+            icon={PackageCheck}
+            loading={statsLoading}
+          />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">

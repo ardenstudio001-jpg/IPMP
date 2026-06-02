@@ -11,8 +11,48 @@ datasource db {
 
 enum Role {
   ADMIN
-  INVENTORY
   PROCUREMENT
+  INVENTORY
+}
+
+enum ProcurementType {
+  LOCAL
+  IMPORTED
+  EMERGENCY
+  STANDARD
+}
+
+enum ListType {
+  PROCUREMENT
+  PURCHASE
+  ACQUIRED
+}
+
+enum PartyRole {
+  SOURCE
+  REQUESTED_BY
+  STOCK_OWNER
+}
+
+enum ListItemStatus {
+  ACTIVE
+  REMOVED
+  VERIFIED
+}
+
+enum MovementAction {
+  CREATED
+  MOVED_FORWARD
+  MOVED_BACKWARD
+  REMOVED
+}
+
+enum VerificationStatus {
+  PENDING
+  MATCHED
+  PARTIAL
+  MISSING
+  DAMAGED
 }
 
 model User {
@@ -26,13 +66,13 @@ model User {
   isActive     Boolean  @default(true)
   lastLoginAt  DateTime?
 
-  createdProducts  Product[] @relation("ProductCreator")
-  approvedProducts Product[] @relation("ProductApprover")
-  costedProducts   Product[] @relation("ProductCostingCompleter")
-
-  notifications Notification[]
-  auditLogs     AuditLog[]
-  invitations   Invitation[] @relation("InvitedBy")
+  createdLists       WorkflowList[]          @relation("ListCreator")
+  removedListItems   ListItem[]              @relation("ListItemRemover")
+  productMovements   ProductMovement[]
+  verifications      InventoryVerification[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  invitations        Invitation[]            @relation("InvitedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -42,52 +82,140 @@ model User {
   @@map("users")
 }
 
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  @@map("categories")
+}
+
 model Product {
-  id                String        @id @default(uuid())
-  name              String
-  quantity          Int
-  unit              String
-  sku               String?       @unique
-  unitCostPrice     Decimal?      @db.Decimal(10, 2)
-  totalCostPrice    Decimal?      @db.Decimal(10, 2)
-  oldSellingPrice   Decimal?      @db.Decimal(10, 2)
-  investmentFund    Decimal?      @db.Decimal(10, 2)
-  operationProfit   Decimal?      @db.Decimal(10, 2)
-  netProfit         Decimal?      @db.Decimal(10, 2)
-  payrollFund       Decimal?      @db.Decimal(10, 2)
-  otherCosts        Decimal?      @db.Decimal(10, 2)
-  grossProfit       Decimal?      @db.Decimal(10, 2)
-  priceBeforeTax    Decimal?      @db.Decimal(10, 2)
-  minimum4Percent   Decimal?      @db.Decimal(10, 2)
-  minimum20Percent  Decimal?      @db.Decimal(10, 2)
-  finalSellingPrice Decimal?      @db.Decimal(10, 2)
-  printed           Boolean       @default(false)
-  status            ProductStatus
+  id              String          @id @default(uuid())
+  sku             String          @unique
+  name            String
+  imageUrl        String?
+  categoryId      String
+  category        Category        @relation(fields: [categoryId], references: [id])
+  procurementType ProcurementType
+  productDetails  String?
+  description     String?
+  unit            String
+  createdAt       DateTime        @default(now())
 
-  createdById String
-  createdBy   User @relation("ProductCreator", fields: [createdById], references: [id])
-
-  approvedById String?
-  approvedBy   User? @relation("ProductApprover", fields: [approvedById], references: [id])
-
-  costingCompletedById String?
-  costingCompletedBy   User? @relation("ProductCostingCompleter", fields: [costingCompletedById], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  listItems        ListItem[]
+  productMovements ProductMovement[]
 
   @@index([name])
-  @@index([status])
   @@index([sku])
-  @@index([createdAt])
+  @@index([categoryId])
   @@map("products")
 }
 
-enum ProductStatus {
-  PENDING_COSTING
-  COSTING_COMPLETED
-  APPROVED
-  REJECTED
+model WorkflowList {
+  id          String   @id @default(uuid())
+  name        String
+  type        ListType
+  createdById String
+  createdBy   User     @relation("ListCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  items         ListItem[]
+  movementsFrom ProductMovement[] @relation("MovementFromList")
+  movementsTo   ProductMovement[] @relation("MovementToList")
+
+  @@index([type, createdAt])
+  @@index([createdById])
+  @@map("lists")
+}
+
+model ListItem {
+  id                String         @id @default(uuid())
+  listId            String
+  list              WorkflowList   @relation(fields: [listId], references: [id])
+  productId         String
+  product           Product        @relation(fields: [productId], references: [id])
+  quantity          Int
+  costPrice         Decimal?       @db.Decimal(10, 2)
+  regularPrice      Decimal?       @db.Decimal(10, 2)
+  salesPrice        Decimal?       @db.Decimal(10, 2)
+  minimum20         Decimal?       @db.Decimal(10, 2)
+  minimum4          Decimal?       @db.Decimal(10, 2)
+  finalSellingPrice Decimal?       @db.Decimal(10, 2)
+  status            ListItemStatus @default(ACTIVE)
+  parentItemId      String?
+  parentItem        ListItem?      @relation("ListItemLineage", fields: [parentItemId], references: [id])
+  childItems        ListItem[]     @relation("ListItemLineage")
+  removedAt         DateTime?
+  removedById       String?
+  removedBy         User?          @relation("ListItemRemover", fields: [removedById], references: [id])
+  createdAt         DateTime       @default(now())
+
+  parties       ListItemParty[]
+  movements     ProductMovement[]
+  verifications InventoryVerification[]
+
+  @@index([listId])
+  @@index([productId])
+  @@index([parentItemId])
+  @@index([status])
+  @@index([listId, status])
+  @@map("list_items")
+}
+
+model ListItemParty {
+  id         String    @id @default(uuid())
+  listItemId String
+  listItem   ListItem  @relation(fields: [listItemId], references: [id], onDelete: Cascade)
+  name       String
+  role       PartyRole
+  createdAt  DateTime  @default(now())
+
+  @@index([listItemId])
+  @@index([listItemId, role])
+  @@map("list_item_parties")
+}
+
+model ProductMovement {
+  id         String         @id @default(uuid())
+  productId  String
+  product    Product        @relation(fields: [productId], references: [id])
+  fromListId String?
+  fromList   WorkflowList?  @relation("MovementFromList", fields: [fromListId], references: [id])
+  toListId   String?
+  toList     WorkflowList?  @relation("MovementToList", fields: [toListId], references: [id])
+  listItemId String?
+  listItem   ListItem?      @relation(fields: [listItemId], references: [id])
+  action     MovementAction
+  movedById  String
+  movedBy    User           @relation(fields: [movedById], references: [id])
+  createdAt  DateTime       @default(now())
+
+  @@index([productId])
+  @@index([fromListId])
+  @@index([toListId])
+  @@index([movedById])
+  @@index([createdAt])
+  @@map("product_movements")
+}
+
+model InventoryVerification {
+  id               String             @id @default(uuid())
+  listItemId       String
+  listItem         ListItem           @relation(fields: [listItemId], references: [id])
+  verifiedById     String
+  verifiedBy       User               @relation(fields: [verifiedById], references: [id])
+  expectedQuantity Int
+  actualQuantity   Int
+  status           VerificationStatus @default(PENDING)
+  notes            String?
+  verifiedAt       DateTime           @default(now())
+
+  @@index([listItemId])
+  @@index([verifiedById])
+  @@index([status])
+  @@map("inventory_verifications")
 }
 
 model PricingSetting {
@@ -153,10 +281,14 @@ model Notification {
 }
 
 enum NotificationType {
-  PRODUCT_CREATED
-  COSTING_COMPLETED
-  PRODUCT_APPROVED
-  SELLING_PRICE_CHANGED
+  PROCUREMENT_LIST_CREATED
+  ITEM_MOVED_TO_PURCHASE
+  PURCHASE_LIST_READY
+  ITEM_MOVED_TO_ACQUIRED
+  ACQUIRED_LIST_READY
+  VERIFICATION_PENDING
+  VERIFICATION_MISMATCH
+  LIST_ITEM_PRICING_UPDATED
   USER_INVITATION_SENT
   SYSTEM
 }

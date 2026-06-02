@@ -1,34 +1,45 @@
-import { Type } from 'class-transformer';
+import { ProcurementType } from '@prisma/client';
 import {
-  IsInt,
-  IsNumber,
+  IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
-  Min,
-  MinLength,
+  IsUrl,
+  MaxLength,
 } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
+  @MaxLength(200)
   name: string;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  quantity: number;
-
-  @IsString()
-  @MinLength(1)
-  unit: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   sku?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  oldSellingPrice?: number;
+  @IsUrl()
+  imageUrl?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  categoryId: string;
+
+  @IsEnum(ProcurementType)
+  procurementType: ProcurementType;
+
+  @IsOptional()
+  @IsString()
+  productDetails?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(40)
+  unit: string;
 }

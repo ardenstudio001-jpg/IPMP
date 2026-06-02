@@ -6,17 +6,7 @@ import { Search } from 'lucide-react';
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/providers/auth-provider';
-import type { Role } from '@/lib/api/types';
-
-const ROUTES: { href: string; label: string; roles: Role[] }[] = [
-  { href: '/dashboard', label: 'Dashboard', roles: ['ADMIN'] },
-  { href: '/workspace', label: 'Admin Workspace', roles: ['ADMIN'] },
-  { href: '/inventory', label: 'Inventory Spreadsheet', roles: ['INVENTORY'] },
-  { href: '/procurement', label: 'Procurement Spreadsheet', roles: ['PROCUREMENT'] },
-  { href: '/pricing', label: 'Pricing Formula', roles: ['ADMIN'] },
-  { href: '/users', label: 'User Management', roles: ['ADMIN'] },
-  { href: '/audit', label: 'Audit Logs', roles: ['ADMIN'] },
-];
+import { NAV_ITEMS } from '@/lib/navigation';
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -34,7 +24,7 @@ export function CommandPalette() {
     return () => document.removeEventListener('keydown', down);
   }, []);
 
-  const items = ROUTES.filter((r) => user && r.roles.includes(user.role));
+  const items = NAV_ITEMS.filter((r) => user && r.roles.includes(user.role));
 
   return (
     <>

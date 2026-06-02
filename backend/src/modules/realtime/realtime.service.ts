@@ -4,11 +4,15 @@ import { MessageEvent } from '@nestjs/common';
 import { Observable, Subject, filter, map } from 'rxjs';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-export type RealtimeEventType = 'products.changed' | 'notifications.changed';
+export type RealtimeEventType =
+  | 'lists.changed'
+  | 'list-items.changed'
+  | 'verifications.changed'
+  | 'notifications.changed';
 
 export interface RealtimeEvent {
   type: RealtimeEventType;
-  product?: Record<string, unknown>;
+  payload?: Record<string, unknown>;
 }
 
 interface BusMessage {
@@ -52,14 +56,22 @@ export class RealtimeService {
     );
   }
 
-  async emitProductChanged(
-    product: Record<string, unknown>,
+  async emitListsChanged(
     roles: Role[] = [Role.ADMIN, Role.PROCUREMENT, Role.INVENTORY],
   ): Promise<void> {
-    await this.emitToRoles(roles, {
-      type: 'products.changed',
-      product,
-    });
+    await this.emitToRoles(roles, { type: 'lists.changed' });
+  }
+
+  async emitListItemsChanged(
+    roles: Role[] = [Role.ADMIN, Role.PROCUREMENT, Role.INVENTORY],
+  ): Promise<void> {
+    await this.emitToRoles(roles, { type: 'list-items.changed' });
+  }
+
+  async emitVerificationsChanged(
+    roles: Role[] = [Role.ADMIN, Role.INVENTORY],
+  ): Promise<void> {
+    await this.emitToRoles(roles, { type: 'verifications.changed' });
   }
 
   emitNotificationsChanged(userIds: string[]): void {

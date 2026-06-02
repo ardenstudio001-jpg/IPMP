@@ -2,14 +2,23 @@ import { apiClient } from '@/lib/api/client';
 import type {
   AuditLog,
   AuthResponse,
+  Category,
+  InventoryVerification,
   Invitation,
+  LineageResponse,
+  ListItem,
+  ListType,
+  ListsPaginatedResponse,
   Notification,
   PaginatedResponse,
   PricingSetting,
+  ProcurementType,
   Product,
-  ProductStats,
   Role,
   User,
+  VerificationStatus,
+  WorkflowListDetail,
+  WorkflowListSummary,
 } from '@/lib/api/types';
 
 export const authApi = {
@@ -46,43 +55,145 @@ export const productsApi = {
     page?: number;
     limit?: number;
     search?: string;
-    status?: string;
+    categoryId?: string;
   }) => apiClient.get<PaginatedResponse<Product>>('/products', { params }),
-  stats: () => apiClient.get<ProductStats>('/products/stats'),
+  skuPreview: () => apiClient.get<{ sku: string }>('/products/sku-preview'),
   get: (id: string) => apiClient.get<Product>(`/products/${id}`),
   create: (data: {
     name: string;
-    quantity: number;
+    categoryId: string;
+    procurementType: ProcurementType;
     unit: string;
     sku?: string;
-    oldSellingPrice?: number;
+    imageUrl?: string;
+    productDetails?: string;
+    description?: string;
   }) => apiClient.post<Product>('/products', data),
   update: (
     id: string,
     data: Partial<{
       sku: string;
       name: string;
-      quantity: number;
+      imageUrl: string;
+      categoryId: string;
+      procurementType: ProcurementType;
+      productDetails: string;
+      description: string;
       unit: string;
-      oldSellingPrice: number;
-      unitCostPrice: number;
     }>,
   ) => apiClient.patch<Product>(`/products/${id}`, data),
-  applyCosting: (id: string, unitCostPrice: number) =>
-    apiClient.patch<Product>(`/products/${id}/costing`, { unitCostPrice }),
-  approve: (id: string, finalSellingPrice: number, printed: boolean) =>
-    apiClient.patch<Product>(`/products/${id}/approve`, {
-      finalSellingPrice,
-      printed,
+};
+
+export const listsApi = {
+  create: (data: { name: string; type: ListType }) =>
+    apiClient.post<WorkflowListSummary>('/lists', data),
+  list: (params?: {
+    type?: ListType;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiClient.get<ListsPaginatedResponse<WorkflowListSummary>>('/lists', {
+      params,
     }),
-  reject: (id: string, reason?: string) =>
-    apiClient.patch<Product>(`/products/${id}/reject`, { reason }),
-  updatePrinted: (id: string, printed: boolean) =>
-    apiClient.patch<Product>(`/products/${id}/printed`, { printed }),
-  updateFinalPrice: (id: string, finalSellingPrice: number) =>
-    apiClient.patch<Product>(`/products/${id}/final-selling-price`, {
-      finalSellingPrice,
+  get: (id: string, includeRemoved?: boolean) =>
+    apiClient.get<WorkflowListDetail>(`/lists/${id}`, {
+      params: includeRemoved ? { includeRemoved: 'true' } : undefined,
     }),
+};
+
+export const listItemsApi = {
+  add: (
+    listId: string,
+    data: {
+      productId?: string;
+      sku?: string;
+      name: string;
+      categoryId: string;
+      procurementType: ProcurementType;
+      unit: string;
+      quantity: number;
+      imageUrl?: string;
+      productDetails?: string;
+      description?: string;
+      costPrice?: number;
+      regularPrice?: number;
+      salesPrice?: number;
+      finalSellingPrice?: number;
+      sources?: string[];
+      requestedBy?: string[];
+      stockOwner?: string[];
+    },
+  ) => apiClient.post<ListItem>(`/lists/${listId}/items`, data),
+  get: (id: string) => apiClient.get<ListItem>(`/list-items/${id}`),
+  update: (
+    id: string,
+    data: Partial<{
+      quantity: number;
+      costPrice: number;
+      regularPrice: number;
+      salesPrice: number;
+      finalSellingPrice: number;
+      sources: string[];
+      requestedBy: string[];
+      stockOwner: string[];
+    }>,
+  ) => apiClient.patch<ListItem>(`/list-items/${id}`, data),
+  lineage: (id: string) =>
+    apiClient.get<LineageResponse>(`/list-items/${id}/lineage`),
+  moveToPurchase: (data: {
+    sourceItemIds: string[];
+    purchaseListId?: string;
+    newPurchaseList?: { name: string };
+  }) => apiClient.post<ListItem[]>('/list-items/move-to-purchase', data),
+  moveToAcquired: (data: {
+    sourceItemIds: string[];
+    acquiredListId?: string;
+    newAcquiredList?: { name: string };
+  }) => apiClient.post<ListItem[]>('/list-items/move-to-acquired', data),
+  rollback: (id: string) =>
+    apiClient.post<ListItem>(`/list-items/${id}/rollback`),
+};
+
+export const categoriesApi = {
+  list: () => apiClient.get<Category[]>('/categories'),
+  get: (id: string) => apiClient.get<Category>(`/categories/${id}`),
+  create: (name: string) => apiClient.post<Category>('/categories', { name }),
+  update: (id: string, name: string) =>
+    apiClient.patch<Category>(`/categories/${id}`, { name }),
+};
+
+export const verificationsApi = {
+  list: (params?: {
+    listId?: string;
+    listItemId?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiClient.get<PaginatedResponse<InventoryVerification>>(
+      '/inventory-verifications',
+      { params },
+    ),
+  create: (data: {
+    listItemId: string;
+    expectedQuantity: number;
+    actualQuantity: number;
+    notes?: string;
+  }) =>
+    apiClient.post<InventoryVerification>('/inventory-verifications', data),
+  update: (
+    id: string,
+    data: Partial<{
+      actualQuantity: number;
+      status: VerificationStatus;
+      notes: string;
+    }>,
+  ) =>
+    apiClient.patch<InventoryVerification>(
+      `/inventory-verifications/${id}`,
+      data,
+    ),
 };
 
 export const pricingApi = {

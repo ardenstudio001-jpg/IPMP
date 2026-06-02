@@ -7,11 +7,12 @@ import {
   type ColDef,
   type GridReadyEvent,
   type CellValueChangedEvent,
+  type SelectionChangedEvent,
 } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Plus, Search, Columns3 } from 'lucide-react';
+import { Plus, Search, Columns3, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -51,6 +52,9 @@ export interface SpreadsheetGridProps<T extends { id: string }> {
   quickFilterPlaceholder?: string;
   getRowId?: (row: T) => string;
   emptyMessage?: string;
+  enableRowSelection?: boolean;
+  toolbarExtra?: React.ReactNode;
+  onSelectionChanged?: (event: SelectionChangedEvent<T>) => void;
 }
 
 export function SpreadsheetGrid<T extends { id: string }>({
@@ -65,6 +69,9 @@ export function SpreadsheetGrid<T extends { id: string }>({
   quickFilterPlaceholder = 'Search...',
   getRowId,
   emptyMessage = 'No products yet. Click Add Row to create your first product.',
+  enableRowSelection = true,
+  toolbarExtra,
+  onSelectionChanged,
 }: SpreadsheetGridProps<T>) {
   const gridRef = useRef<AgGridReact<T>>(null);
   const [quickFilter, setQuickFilter] = useState('');
@@ -126,12 +133,21 @@ export function SpreadsheetGrid<T extends { id: string }>({
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {toolbarExtra}
           {onAddRow && (
             <Button size="sm" onClick={onAddRow}>
               <Plus className="h-4 w-4" />
               {addRowLabel}
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => gridRef.current?.api.exportDataAsCsv()}
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -173,9 +189,14 @@ export function SpreadsheetGrid<T extends { id: string }>({
             pagination
             paginationPageSize={50}
             paginationPageSizeSelector={[25, 50, 100]}
-            rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: true }}
+            rowSelection={
+              enableRowSelection
+                ? { mode: 'multiRow', checkboxes: true, headerCheckbox: true }
+                : undefined
+            }
             onGridReady={onGridReady}
             onCellValueChanged={onCellValueChanged}
+            onSelectionChanged={onSelectionChanged}
             getRowId={resolveRowId}
             suppressScrollOnNewData
             suppressMovableColumns={false}

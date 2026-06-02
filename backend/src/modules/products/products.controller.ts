@@ -13,13 +13,8 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
-import { ApproveProductDto } from './dto/approve-product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListProductsQueryDto } from './dto/list-products-query.dto';
-import { RejectProductDto } from './dto/reject-product.dto';
-import { UpdateCostingDto } from './dto/update-costing.dto';
-import { UpdateFinalSellingPriceDto } from './dto/update-final-selling-price.dto';
-import { UpdatePrintedDto } from './dto/update-printed.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductsService } from './products.service';
 
@@ -29,19 +24,13 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.INVENTORY)
+  @Roles(Role.ADMIN, Role.PROCUREMENT, Role.INVENTORY)
   create(@GetUser('id') userId: string, @Body() dto: CreateProductDto) {
     return this.productsService.create(userId, dto);
   }
 
-  @Get('stats')
-  @Roles(Role.ADMIN)
-  getStats() {
-    return this.productsService.getStats();
-  }
-
   @Get('sku-preview')
-  @Roles(Role.ADMIN, Role.INVENTORY)
+  @Roles(Role.ADMIN, Role.PROCUREMENT, Role.INVENTORY)
   suggestSku() {
     return this.productsService.suggestSku();
   }
@@ -57,63 +46,12 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.INVENTORY)
+  @Roles(Role.ADMIN, Role.PROCUREMENT, Role.INVENTORY)
   update(
     @Param('id') id: string,
     @GetUser('id') userId: string,
-    @GetUser('role') userRole: Role,
     @Body() dto: UpdateProductDto,
   ) {
-    return this.productsService.update(id, userId, userRole, dto);
-  }
-
-  @Patch(':id/costing')
-  @Roles(Role.PROCUREMENT, Role.ADMIN)
-  applyCosting(
-    @Param('id') id: string,
-    @GetUser('id') userId: string,
-    @Body() dto: UpdateCostingDto,
-  ) {
-    return this.productsService.applyCosting(id, userId, dto);
-  }
-
-  @Patch(':id/approve')
-  @Roles(Role.ADMIN)
-  approve(
-    @Param('id') id: string,
-    @GetUser('id') userId: string,
-    @Body() dto: ApproveProductDto,
-  ) {
-    return this.productsService.approve(id, userId, dto);
-  }
-
-  @Patch(':id/reject')
-  @Roles(Role.ADMIN)
-  reject(
-    @Param('id') id: string,
-    @GetUser('id') userId: string,
-    @Body() dto: RejectProductDto,
-  ) {
-    return this.productsService.reject(id, userId, dto);
-  }
-
-  @Patch(':id/printed')
-  @Roles(Role.ADMIN)
-  updatePrinted(
-    @Param('id') id: string,
-    @GetUser('id') userId: string,
-    @Body() dto: UpdatePrintedDto,
-  ) {
-    return this.productsService.updatePrinted(id, userId, dto);
-  }
-
-  @Patch(':id/final-selling-price')
-  @Roles(Role.ADMIN)
-  updateFinalSellingPrice(
-    @Param('id') id: string,
-    @GetUser('id') userId: string,
-    @Body() dto: UpdateFinalSellingPriceDto,
-  ) {
-    return this.productsService.updateFinalSellingPrice(id, userId, dto);
+    return this.productsService.update(id, userId, dto);
   }
 }
