@@ -91,6 +91,11 @@ export class PricingService {
   }
 
   async createSettings(userId: string, dto: CreatePricingSettingDto) {
+    const previousActive = await this.prisma.pricingSetting.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
     const created = await this.prisma.$transaction(async (tx) => {
       await tx.pricingSetting.updateMany({
         where: { isActive: true },
@@ -111,6 +116,9 @@ export class PricingService {
       action: AuditAction.PRICING_SETTINGS_UPDATED,
       entityType: EntityType.PricingSetting,
       entityId: created.id,
+      oldValue: previousActive
+        ? this.serializeSetting(previousActive)
+        : undefined,
       newValue: this.serializeSetting(created),
     });
 

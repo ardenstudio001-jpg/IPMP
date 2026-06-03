@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 
 const SKU_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-function randomSkuSuffix(length = 8): string {
+function randomSkuSuffix(length = 5): string {
   const bytes = randomBytes(length);
   let result = '';
   for (let i = 0; i < length; i++) {
@@ -11,6 +11,7 @@ function randomSkuSuffix(length = 8): string {
   return result;
 }
 
-export function generateSkuCandidate(prefix = 'SKU'): string {
-  return `${prefix}-${randomSkuSuffix(8)}`;
+/** Generates a unique 5-character SKU (no prefix). */
+export function generateSkuCandidate(): string {
+  return randomSkuSuffix(5);
 }

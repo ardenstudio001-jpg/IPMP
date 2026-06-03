@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { SelectionChangedEvent } from 'ag-grid-community';
 import Link from 'next/link';
 import { ArrowLeft, GitBranch, Undo2, ArrowRight } from 'lucide-react';
@@ -9,6 +9,8 @@ import { SpreadsheetGrid } from '@/components/grid/spreadsheet-grid';
 import { buildListItemColumns } from '@/components/grid/list-item-columns';
 import { useListItemSpreadsheet } from '@/hooks/use-list-item-spreadsheet';
 import { useListItemMutations } from '@/hooks/queries/use-list-items';
+import { useQueryClient } from '@tanstack/react-query';
+import { categoryKeys } from '@/hooks/queries/use-categories';
 import { useAuth } from '@/providers/auth-provider';
 import type { ListType, Role } from '@/lib/api/types';
 import { LIST_TYPE_LABELS, LIST_TYPE_ROUTES } from '@/lib/api/types';
@@ -40,6 +42,7 @@ export function ListDetailPage({
   listType: ListType;
 }) {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [includeRemoved, setIncludeRemoved] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -66,14 +69,25 @@ export function ListDetailPage({
 
   const { moveToPurchase, moveToAcquired, rollback } = useListItemMutations(listId);
 
+  const [localCategories, setLocalCategories] = useState(categories);
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
+
   const columnDefs = useMemo(
     () =>
       buildListItemColumns({
         listType,
-        categories,
+        categories: localCategories,
         editable: canEdit,
+        onCategoryCreated: (cat) => {
+          setLocalCategories((prev) =>
+            prev.some((c) => c.id === cat.id) ? prev : [...prev, cat],
+          );
+          void qc.invalidateQueries({ queryKey: categoryKeys.all });
+        },
       }),
-    [listType, categories, canEdit],
+    [listType, localCategories, canEdit],
   );
 
   const syncSelection = (event: SelectionChangedEvent) => {

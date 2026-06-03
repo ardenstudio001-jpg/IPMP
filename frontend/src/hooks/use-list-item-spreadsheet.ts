@@ -227,6 +227,11 @@ export function useListItemSpreadsheet({
       const field = event.colDef.field ?? event.colDef.colId;
       if (!field) return;
 
+      let newValue = event.newValue;
+      if (field === 'sources' || field === 'requestedBy' || field === 'stockOwner') {
+        newValue = row[field] ?? newValue;
+      }
+
       if (row._isDraft) {
         if (canPersistDraft(row, categories)) {
           await persistDraft(row);
@@ -235,7 +240,7 @@ export function useListItemSpreadsheet({
       }
 
       try {
-        await patchListItem(row, field, event.newValue);
+        await patchListItem(row, field, newValue);
       } catch {
         event.api.refreshCells({ rowNodes: [event.node], force: true });
       }

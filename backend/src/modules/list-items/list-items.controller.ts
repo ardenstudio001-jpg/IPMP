@@ -48,7 +48,7 @@ export class ListItemsController {
   }
 
   @Patch('list-items/:id')
-  @Roles(Role.ADMIN, Role.PROCUREMENT)
+  @Roles(Role.ADMIN, Role.PROCUREMENT, Role.INVENTORY)
   update(
     @Param('id') id: string,
     @GetUser('id') userId: string,

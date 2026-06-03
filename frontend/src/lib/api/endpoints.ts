@@ -35,6 +35,8 @@ export const authApi = {
 
 export const usersApi = {
   me: () => apiClient.get<User>('/users/me'),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    apiClient.patch<{ message: string }>('/users/me/password', data),
   list: () => apiClient.get<User[]>('/users'),
   create: (data: {
     email: string;

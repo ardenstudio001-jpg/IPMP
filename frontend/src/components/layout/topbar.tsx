@@ -1,6 +1,8 @@
 'use client';
 
-import { Bell, LogOut, User } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, KeyRound, LogOut, User } from 'lucide-react';
+import { ChangePasswordDialog } from '@/components/account/change-password-dialog';
 import { useAuth } from '@/providers/auth-provider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,7 @@ function initials(user: { firstName?: string | null; lastName?: string | null; e
 
 export function Topbar({ title }: { title?: string }) {
   const { user, logout } = useAuth();
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
@@ -55,6 +58,10 @@ export function Topbar({ title }: { title?: string }) {
               {user?.role}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setPasswordOpen(true)}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              Change password
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void logout()}>
               <LogOut className="mr-2 h-4 w-4" />
               Log out
@@ -62,6 +69,7 @@ export function Topbar({ title }: { title?: string }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
     </header>
   );
 }

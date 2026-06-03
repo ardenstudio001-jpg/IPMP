@@ -11,6 +11,7 @@ export const AuditAction = {
   PRICING_SETTINGS_UPDATED: 'PRICING_SETTINGS_UPDATED',
   CATEGORY_CREATED: 'CATEGORY_CREATED',
   CATEGORY_UPDATED: 'CATEGORY_UPDATED',
+  USER_PASSWORD_CHANGED: 'USER_PASSWORD_CHANGED',
 } as const;
 
 export type AuditActionType = (typeof AuditAction)[keyof typeof AuditAction];

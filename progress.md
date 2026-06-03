@@ -2,7 +2,7 @@
 
 **Last Updated**: June 3, 2026  
 **Project**: Inventory & Pricing Management Platform  
-**Status**: Backend list workflow + lightweight party names (sources / requestedBy / stockOwner)
+**Status**: List workflow + party names + frontend verification, audit UX, and persistence fixes
 
 ---
 
@@ -12,7 +12,38 @@ IPMP uses a **list-based procurement workflow** (procurement → purchase → ac
 
 A recent refinement replaced heavyweight `Requester` / `StockOwner` entities and any supplier registry with **lightweight multi-name fields** stored via `ListItemParty` (name + role only). Users enter plain strings in the API—no pre-created records or CRUD modules for suppliers or organizations.
 
-The **frontend** still needs migration to the list-based API.
+The **frontend** uses list-based spreadsheets for procurement/purchase/acquired lists and a dedicated inventory verification workspace.
+
+---
+
+## June 3, 2026 — Bug fixes & UX improvements
+
+### Security
+
+- Self-service password change requires **current password**, **new password**, and **confirm new password** (UI in account menu).
+- Backend validates current password hash, invalidates refresh token on success, and audits `USER_PASSWORD_CHANGED` (no password values in logs).
+- User deactivation requires an explicit confirmation dialog (name, role, warning) before `isActive` is set to false.
+
+### Audit
+
+- Audit table and timeline share the same **server-side pagination** (`page`, `limit`, `search`) — same records, totals, and page count on both panels.
+- **View changes** shows only fields that differ (plain text default, optional JSON toggle).
+- Pricing settings audits include `oldValue` from the previously active setting for field-level diffs (e.g. Investment Fund Rate 10% → 15%).
+
+### Inventory verification
+
+- Verification UI: select an **acquired list**, spreadsheet of all list products (including `VERIFIED`), inline actual quantity / notes / verify.
+- Verification history is paginated per list; API returns `{ data, meta }` (fixed mismatch with frontend).
+- Inventory staff can update product name, image, and details during verification (audited via `ProductsService`).
+
+### Category UX
+
+- Category column uses **searchable select + create** (filter as you type, `Create "…"` for new categories, immediate API persist).
+
+### Persistence fixes
+
+- **Sources** and **requestedBy** grid edits use explicit `valueSetter` / `equals` and read committed row values before PATCH — party arrays persist to `ListItemParty`.
+- Auto-generated SKUs are **5 characters** (alphanumeric, no prefix).
 
 ---
 
@@ -122,7 +153,9 @@ Pass `sources`, `requestedBy`, or `stockOwner` arrays to **replace** that role�
 |--------|:-----:|:-----------:|:---------:|
 | Workflow lists / moves / rollback | ✓ | ✓ | ✗ |
 | Acquired list read / verify | ✓ | read lists | ✓ |
+| Update acquired item quantity | ✓ | ✗ | ✓ |
 | Category write | ✓ | ✗ | ✗ |
+| Change own password | ✓ | ✓ | ✓ |
 
 ---
 
@@ -136,7 +169,10 @@ Pass `sources`, `requestedBy`, or `stockOwner` arrays to **replace** that role�
 
 ## Frontend Status
 
-Not updated. Legacy product-approval UI remains incompatible until wired to list endpoints and new list item payloads.
+- List detail spreadsheets (procurement / purchase / acquired) with party tag editors and category search/create
+- Inventory verification workspace (acquired list picker + verify grid + history)
+- Audit page with synchronized pagination and diff-based view changes
+- Account password change dialog; admin user deactivate confirmation
 
 ---
 
@@ -147,3 +183,5 @@ Not updated. Legacy product-approval UI remains incompatible until wired to list
 - [x] Migration with legacy data preservation
 - [x] Removed requester/stock-owner modules
 - [x] Updated DTOs, services, formatters, tests, docs
+- [x] Password change security, audit timeline sync, verification redesign
+- [x] Sources / requestedBy persistence, verified records visibility, 5-char SKU

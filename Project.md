@@ -109,7 +109,37 @@ Soft-remove (`REMOVED`) on purchase or acquired items only. Upstream list items 
 
 ### Inventory verification
 
-`InventoryVerification` on acquired `ListItem`s; mismatch statuses notify admins.
+1. Inventory user opens **Acquired Lists** and selects a list.
+2. Grid shows all non-removed items (including previously verified) with expected quantity from the list item.
+3. User enters **actual quantity**, optional **notes**, and may correct **product name**, **image**, or **product details** when discrepancies are found (product updates are audited).
+4. **Verify** creates or updates an `InventoryVerification` record; matched counts may set list item status to `VERIFIED`.
+5. **Verification history** lists past records for the selected list (server-paginated).
+
+Mismatch statuses notify admins/procurement as before.
+
+### Password change (self-service)
+
+`PATCH /users/me/password` with `currentPassword` and `newPassword`. Current password is verified against the stored hash; refresh tokens are cleared; audit action `USER_PASSWORD_CHANGED` (no secrets in `oldValue`/`newValue`).
+
+### User deactivation (admin)
+
+UI confirmation shows user name and role before `PATCH /users/:id` with `isActive: false`.
+
+### Category on list items
+
+Category cell: type to filter existing categories or choose **Create "Name"** to `POST /categories` and assign immediately.
+
+### Audit timeline
+
+`GET /audit?page&limit&search` feeds both the audit table and timeline on the same page index. **View changes** diffs `oldValue` vs `newValue` (plain text default, JSON optional).
+
+### Sources / requestedBy persistence
+
+Values are stored as `ListItemParty` rows. Updates send full replacement arrays for the role via `PATCH /list-items/:id`. Grid editors commit string arrays with explicit AG Grid value setters.
+
+### SKU generation
+
+New catalog SKUs default to **5 characters** from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` when not provided.
 
 ---
 
@@ -191,7 +221,9 @@ Use list item payloads instead.
 |------------|:-----:|:-----------:|:---------:|
 | Lists + items + moves + rollback | ✓ | ✓ | ✗ |
 | View acquired lists / items | ✓ | ✓ | ✓ |
+| Update acquired item quantity | ✓ | ✗ | ✓ |
 | Verify acquired items | ✓ | ✗ | ✓ |
+| Change own password | ✓ | ✓ | ✓ |
 | Categories write | ✓ | ✗ | ✗ |
 | Users / audit / pricing admin | ✓ | ✗ | ✗ |
 
@@ -237,7 +269,7 @@ sequenceDiagram
 
 **Backend:** NestJS 11, Prisma 7, PostgreSQL, class-validator  
 
-**Frontend:** Next.js (pending update for list API + party name fields)
+**Frontend:** Next.js App Router, AG Grid spreadsheets, TanStack Query, audit diff UI, verification workspace
 
 ---
 

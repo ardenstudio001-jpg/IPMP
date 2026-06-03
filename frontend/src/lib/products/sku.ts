@@ -1,6 +1,6 @@
 const SKU_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-function randomSkuSuffix(length = 8): string {
+function randomSkuSuffix(length = 5): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   let result = '';
@@ -10,6 +10,7 @@ function randomSkuSuffix(length = 8): string {
   return result;
 }
 
-export function generateSkuCandidate(prefix = 'SKU'): string {
-  return `${prefix}-${randomSkuSuffix(8)}`;
+/** Generates a 5-character SKU candidate (no prefix). */
+export function generateSkuCandidate(): string {
+  return randomSkuSuffix(5);
 }

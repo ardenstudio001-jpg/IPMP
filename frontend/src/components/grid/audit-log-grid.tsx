@@ -111,10 +111,6 @@ export function AuditLogGrid({
     e.api.sizeColumnsToFit();
   }, []);
 
-  const applyQuickFilter = useCallback((text: string) => {
-    gridRef.current?.api.setGridOption('quickFilterText', text);
-  }, []);
-
   if (loading) {
     return (
       <div className={cn('space-y-3', className)}>
@@ -132,10 +128,7 @@ export function AuditLogGrid({
           className="pl-9"
           placeholder="Search email, action, entity, SKU..."
           value={search}
-          onChange={(e) => {
-            onSearchChange(e.target.value);
-            applyQuickFilter(e.target.value);
-          }}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
       <div className="rounded-xl border border-border shadow-sm">

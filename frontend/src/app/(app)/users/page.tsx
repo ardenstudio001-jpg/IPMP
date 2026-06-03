@@ -43,6 +43,7 @@ export default function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [resetUser, setResetUser] = useState<User | null>(null);
+  const [deactivateUser, setDeactivateUser] = useState<User | null>(null);
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -155,12 +156,16 @@ export default function UsersPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          update.mutate({
-                            id: user.id,
-                            data: { isActive: !(user.isActive !== false) },
-                          })
-                        }
+                        onClick={() => {
+                          if (user.isActive !== false) {
+                            setDeactivateUser(user);
+                          } else {
+                            update.mutate({
+                              id: user.id,
+                              data: { isActive: true },
+                            });
+                          }
+                        }}
                       >
                         <UserX className="h-4 w-4" />
                       </Button>
@@ -232,6 +237,49 @@ export default function UsersPage() {
             </div>
           </div>
           <DialogFooter><Button onClick={handleUpdate}>Save</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deactivateUser} onOpenChange={() => setDeactivateUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate user?</DialogTitle>
+          </DialogHeader>
+          {deactivateUser && (
+            <div className="space-y-2 text-sm">
+              <p>Are you sure you want to deactivate this user?</p>
+              <p>
+                <span className="font-medium">Name:</span>{' '}
+                {[deactivateUser.firstName, deactivateUser.lastName]
+                  .filter(Boolean)
+                  .join(' ') || '—'}
+              </p>
+              <p>
+                <span className="font-medium">Role:</span> {deactivateUser.role}
+              </p>
+              <p className="text-muted-foreground">
+                This user will no longer be able to access the system.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivateUser(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={update.isPending}
+              onClick={() => {
+                if (!deactivateUser) return;
+                update.mutate(
+                  { id: deactivateUser.id, data: { isActive: false } },
+                  { onSuccess: () => setDeactivateUser(null) },
+                );
+              }}
+            >
+              Deactivate User
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

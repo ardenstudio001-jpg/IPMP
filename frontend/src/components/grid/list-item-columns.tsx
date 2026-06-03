@@ -9,6 +9,7 @@ import {
   PartyTagsCellEditor,
   PartyTagsCellRenderer,
 } from '@/components/grid/cells/party-tags-cell';
+import { CategorySearchCellEditor } from '@/components/grid/cells/category-search-cell';
 
 export type ListItemGridRow = ListItem & {
   _clientRowId?: string;
@@ -35,16 +36,32 @@ function imageCellRenderer(params: ICellRendererParams<ListItemGridRow>) {
   );
 }
 
+function partyFieldSetter(field: 'sources' | 'requestedBy' | 'stockOwner') {
+  return {
+    valueSetter: (p: { data?: ListItemGridRow; newValue: unknown }) => {
+      if (!p.data) return false;
+      const next = Array.isArray(p.newValue)
+        ? (p.newValue as string[]).filter((v) => typeof v === 'string' && v.trim())
+        : [];
+      p.data[field] = next;
+      return true;
+    },
+    equals: (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b),
+  };
+}
+
 export interface BuildListItemColumnsOptions {
   listType: ListType;
   categories: Category[];
   editable: boolean;
+  onCategoryCreated?: (category: Category) => void;
 }
 
 export function buildListItemColumns({
   listType,
   categories,
   editable,
+  onCategoryCreated,
 }: BuildListItemColumnsOptions): ColDef<ListItemGridRow>[] {
   const canEdit = editable;
   const categoryNames = categories.map((c) => c.name);
@@ -96,6 +113,7 @@ export function buildListItemColumns({
       editable: canEdit,
       cellRenderer: PartyTagsCellRenderer,
       cellEditor: PartyTagsCellEditor,
+      ...partyFieldSetter(partyField),
     },
     {
       field: 'sources',
@@ -104,6 +122,7 @@ export function buildListItemColumns({
       editable: canEdit,
       cellRenderer: PartyTagsCellRenderer,
       cellEditor: PartyTagsCellEditor,
+      ...partyFieldSetter('sources'),
     },
     {
       colId: 'product.category',
@@ -111,18 +130,30 @@ export function buildListItemColumns({
       width: 150,
       editable: canEdit,
       valueGetter: (p) => p.data?.product?.category?.name ?? '',
-      cellEditor: 'agSelectCellEditor',
+      cellEditor: CategorySearchCellEditor,
+      cellEditorPopup: true,
       cellEditorParams: {
-        values: categoryNames.length ? categoryNames : ['—'],
+        categories,
+        onCategoryCreated,
       },
       valueSetter: (p) => {
         if (!p.data?.product) return false;
-        const idx = categoryNames.indexOf(String(p.newValue));
+        const name = String(p.newValue ?? '').trim();
+        const idx = categoryNames.indexOf(name);
         if (idx >= 0) {
           p.data.product.categoryId = categoryIds[idx]!;
           p.data.product.category = categories[idx];
+          return true;
         }
-        return true;
+        const match = categories.find(
+          (c) => c.name.toLowerCase() === name.toLowerCase(),
+        );
+        if (match) {
+          p.data.product.categoryId = match.id;
+          p.data.product.category = match;
+          return true;
+        }
+        return false;
       },
     },
     {

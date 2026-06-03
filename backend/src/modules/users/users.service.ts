@@ -1,9 +1,13 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { AuditAction } from 'src/common/constants/audit-actions';
+import { EntityType } from 'src/common/constants/entity-types';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -28,7 +32,10 @@ const userSelect = {
 @Injectable()
 export class UsersService {
   private readonly SALT_ROUNDS = 10;
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async findOne(userId: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
@@ -172,12 +179,12 @@ export class UsersService {
     );
 
     if (!isPasswordValid) {
-      throw new NotFoundException('Current password is incorrect');
+      throw new BadRequestException('Current password is incorrect.');
     }
 
     const isSamePassword = await bcrypt.compare(newPassword, user.password);
     if (isSamePassword) {
-      throw new NotFoundException(
+      throw new BadRequestException(
         'New password must be different from the current password',
       );
     }
@@ -186,7 +193,18 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { password: hashedNewPassword },
+      data: {
+        password: hashedNewPassword,
+        refreshToken: null,
+      },
+    });
+
+    await this.auditService.logAction({
+      userId,
+      action: AuditAction.USER_PASSWORD_CHANGED,
+      entityType: EntityType.User,
+      entityId: userId,
+      newValue: { message: 'User changed password' },
     });
 
     return { message: 'Password changed successfully' };

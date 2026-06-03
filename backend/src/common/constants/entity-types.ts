@@ -7,6 +7,7 @@ export const EntityType = {
   ProductMovement: 'ProductMovement',
   InventoryVerification: 'InventoryVerification',
   Category: 'Category',
+  User: 'User',
 } as const;
 
 export type EntityTypeValue = (typeof EntityType)[keyof typeof EntityType];

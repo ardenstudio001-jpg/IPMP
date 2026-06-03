@@ -246,8 +246,30 @@ export class ListItemsService {
   }
 
   async update(id: string, userId: string, role: Role, dto: UpdateListItemDto) {
-    this.assertProcurementRole(role);
     const old = await this.getActiveItem(id);
+
+    if (role === Role.INVENTORY) {
+      if (old.list.type !== ListType.ACQUIRED) {
+        throw new ForbiddenException(
+          'Inventory staff can only update acquired list items',
+        );
+      }
+      const inventoryAllowed: (keyof UpdateListItemDto)[] = ['quantity'];
+      const disallowed = (
+        Object.keys(dto) as (keyof UpdateListItemDto)[]
+      ).filter(
+        (key) =>
+          dto[key] !== undefined &&
+          !inventoryAllowed.includes(key),
+      );
+      if (disallowed.length > 0) {
+        throw new ForbiddenException(
+          `Inventory staff cannot update: ${disallowed.join(', ')}`,
+        );
+      }
+    } else {
+      this.assertProcurementRole(role);
+    }
 
     const quantity = dto.quantity ?? old.quantity;
     const costPrice =

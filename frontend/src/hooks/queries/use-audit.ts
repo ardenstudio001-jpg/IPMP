@@ -22,7 +22,6 @@ export function useAuditLogs(params?: {
     queryKey: auditKeys.list({ ...params, search }),
     queryFn: async () => {
       const { data } = await auditApi.list({
-        limit: 100,
         ...params,
         search,
       });

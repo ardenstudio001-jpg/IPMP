@@ -269,7 +269,7 @@ export class InventoryVerificationService {
     ]);
 
     return {
-      items,
+      data: items,
       meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
