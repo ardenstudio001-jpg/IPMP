@@ -43,8 +43,8 @@ export function LineagePanel({ itemId, open, onOpenChange }: LineagePanelProps) 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-        <SheetHeader>
+      <SheetContent className="w-full px-6  py-2 overflow-y-auto sm:max-w-md">
+        <SheetHeader className="">
           <SheetTitle className="flex items-center gap-2">
             <GitBranch className="h-5 w-5 text-primary" />
             Workflow lineage
