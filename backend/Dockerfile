@@ -17,7 +17,8 @@ RUN pnpm prisma generate
 RUN pnpm run build 
 
 FROM node:22-alpine
-
+ENV PNPM_HOME=/pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 COPY package*.json pnpm-lock.yaml ./
