@@ -1,27 +1,29 @@
 FROM node:22-alpine AS builder 
-
+ENV PNPM_HOME=/pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app 
 
-COPY package*.json ./ 
+COPY package*.json pnpm-lock.yaml ./
+
 
 COPY prisma ./prisma/ 
 
-RUN npm install
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 COPY . . 
 
 RUN npx prisma generate 
 
-RUN npm run build 
+RUN pnpm run build 
 
 FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package*.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
-RUN npm install --omit=dev
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
