@@ -12,7 +12,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 COPY . . 
 
-RUN npx prisma generate 
+RUN pnpm prisma generate 
 
 RUN pnpm run build 
 
@@ -34,4 +34,4 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 ENV NODE_ENV=production
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/src/main"]

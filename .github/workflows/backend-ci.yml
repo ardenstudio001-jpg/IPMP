@@ -14,7 +14,6 @@ on:
 
 jobs:
   backend-ci:
-
     runs-on: ubuntu-latest
 
     defaults:
@@ -25,7 +24,6 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -33,17 +31,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: pnpm
+          cache: "pnpm"
           cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: npx prisma generate
+        run: pnpm prisma generate
 
       - name: Validate Prisma schema
-        run: npx prisma validate
+        run: pnpm prisma validate
 
       - name: Run lint
         run: pnpm run lint
