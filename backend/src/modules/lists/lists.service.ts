@@ -139,7 +139,9 @@ export class ListsService {
       throw new NotFoundException('List not found');
     }
     if (userRole === Role.INVENTORY && list.type !== ListType.ACQUIRED) {
-      throw new ForbiddenException('Inventory staff can only access acquired lists');
+      throw new ForbiddenException(
+        'Inventory staff can only access acquired lists',
+      );
     }
     return {
       ...list,

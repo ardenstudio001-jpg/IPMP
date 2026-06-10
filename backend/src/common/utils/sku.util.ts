@@ -6,7 +6,7 @@ function randomSkuSuffix(length = 5): string {
   const bytes = randomBytes(length);
   let result = '';
   for (let i = 0; i < length; i++) {
-    result += SKU_ALPHABET[bytes[i]! % SKU_ALPHABET.length];
+    result += SKU_ALPHABET[bytes[i] % SKU_ALPHABET.length];
   }
   return result;
 }

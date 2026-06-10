@@ -35,10 +35,7 @@ export class ListItemsController {
   }
 
   @Get('list-items/:id')
-  findOne(
-    @Param('id') id: string,
-    @GetUser('role') role: Role,
-  ) {
+  findOne(@Param('id') id: string, @GetUser('role') role: Role) {
     return this.listItemsService.findOne(id, role);
   }
 

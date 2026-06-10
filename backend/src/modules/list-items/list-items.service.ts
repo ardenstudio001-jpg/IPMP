@@ -57,7 +57,9 @@ export class ListItemsService {
 
   private assertProcurementRole(role: Role) {
     if (role !== Role.ADMIN && role !== Role.PROCUREMENT) {
-      throw new ForbiddenException('Only procurement staff can perform this action');
+      throw new ForbiddenException(
+        'Only procurement staff can perform this action',
+      );
     }
   }
 
@@ -68,8 +70,10 @@ export class ListItemsService {
   ) {
     const rolesToReplace: PartyRole[] = [];
     if (groups.sources !== undefined) rolesToReplace.push(PartyRole.SOURCE);
-    if (groups.requestedBy !== undefined) rolesToReplace.push(PartyRole.REQUESTED_BY);
-    if (groups.stockOwner !== undefined) rolesToReplace.push(PartyRole.STOCK_OWNER);
+    if (groups.requestedBy !== undefined)
+      rolesToReplace.push(PartyRole.REQUESTED_BY);
+    if (groups.stockOwner !== undefined)
+      rolesToReplace.push(PartyRole.STOCK_OWNER);
 
     if (rolesToReplace.length === 0) return;
 
@@ -138,7 +142,9 @@ export class ListItemsService {
       costPrice:
         dto.costPrice !== undefined ? toDecimal(dto.costPrice) : undefined,
       regularPrice:
-        dto.regularPrice !== undefined ? toDecimal(dto.regularPrice) : undefined,
+        dto.regularPrice !== undefined
+          ? toDecimal(dto.regularPrice)
+          : undefined,
       salesPrice:
         dto.salesPrice !== undefined ? toDecimal(dto.salesPrice) : undefined,
       finalSellingPrice:
@@ -171,31 +177,43 @@ export class ListItemsService {
     });
   }
 
-  async addToList(listId: string, userId: string, role: Role, dto: AddListItemDto) {
+  async addToList(
+    listId: string,
+    userId: string,
+    role: Role,
+    dto: AddListItemDto,
+  ) {
     this.assertProcurementRole(role);
 
-    const list = await this.prisma.workflowList.findUnique({ where: { id: listId } });
+    const list = await this.prisma.workflowList.findUnique({
+      where: { id: listId },
+    });
     if (!list) {
       throw new NotFoundException('List not found');
     }
     if (list.type !== ListType.PROCUREMENT) {
-      throw new BadRequestException('Items can only be added directly to procurement lists');
+      throw new BadRequestException(
+        'Items can only be added directly to procurement lists',
+      );
     }
 
     let productId = dto.productId;
     if (productId) {
       await this.productsService.findOne(productId);
     } else {
-      const product = await this.productsService.findOrCreateFromListItem(userId, {
-        sku: dto.sku,
-        name: dto.name,
-        imageUrl: dto.imageUrl,
-        categoryId: dto.categoryId,
-        procurementType: dto.procurementType,
-        productDetails: dto.productDetails,
-        description: dto.description,
-        unit: dto.unit,
-      });
+      const product = await this.productsService.findOrCreateFromListItem(
+        userId,
+        {
+          sku: dto.sku,
+          name: dto.name,
+          imageUrl: dto.imageUrl,
+          categoryId: dto.categoryId,
+          procurementType: dto.procurementType,
+          productDetails: dto.productDetails,
+          description: dto.description,
+          unit: dto.unit,
+        },
+      );
       productId = product.id;
     }
 
@@ -258,9 +276,7 @@ export class ListItemsService {
       const disallowed = (
         Object.keys(dto) as (keyof UpdateListItemDto)[]
       ).filter(
-        (key) =>
-          dto[key] !== undefined &&
-          !inventoryAllowed.includes(key),
+        (key) => dto[key] !== undefined && !inventoryAllowed.includes(key),
       );
       if (disallowed.length > 0) {
         throw new ForbiddenException(
@@ -325,11 +341,14 @@ export class ListItemsService {
     });
 
     if (dto.costPrice !== undefined) {
-      await this.notificationsService.notifyByRoles([Role.ADMIN, Role.PROCUREMENT], {
-        title: 'List item pricing updated',
-        message: `Pricing updated for ${item.product.name} (${item.product.sku}).`,
-        type: NotificationType.LIST_ITEM_PRICING_UPDATED,
-      });
+      await this.notificationsService.notifyByRoles(
+        [Role.ADMIN, Role.PROCUREMENT],
+        {
+          title: 'List item pricing updated',
+          message: `Pricing updated for ${item.product.name} (${item.product.sku}).`,
+          type: NotificationType.LIST_ITEM_PRICING_UPDATED,
+        },
+      );
     }
 
     await this.realtimeService.emitListItemsChanged();
@@ -342,7 +361,9 @@ export class ListItemsService {
     let purchaseListId = dto.purchaseListId;
     if (!purchaseListId) {
       if (!dto.newPurchaseList?.name) {
-        throw new BadRequestException('Provide purchaseListId or newPurchaseList.name');
+        throw new BadRequestException(
+          'Provide purchaseListId or newPurchaseList.name',
+        );
       }
       const list = await this.prisma.workflowList.create({
         data: {
@@ -377,7 +398,7 @@ export class ListItemsService {
 
         const copy = await tx.listItem.create({
           data: {
-            listId: purchaseListId!,
+            listId: purchaseListId,
             productId: source.productId,
             quantity: source.quantity,
             costPrice: source.costPrice,
@@ -397,7 +418,7 @@ export class ListItemsService {
           data: {
             productId: source.productId,
             fromListId: source.listId,
-            toListId: purchaseListId!,
+            toListId: purchaseListId,
             listItemId: copy.id,
             action: MovementAction.MOVED_FORWARD,
             movedById: userId,
@@ -416,20 +437,30 @@ export class ListItemsService {
         entityType: EntityType.ListItem,
         entityId: item.id,
         entitySku: item.product.sku,
-        newValue: { from: 'PROCUREMENT', to: 'PURCHASE', item: formatListItem(item) },
+        newValue: {
+          from: 'PROCUREMENT',
+          to: 'PURCHASE',
+          item: formatListItem(item),
+        },
       });
     }
 
-    await this.notificationsService.notifyByRoles([Role.ADMIN, Role.PROCUREMENT], {
-      title: 'Items moved to purchase list',
-      message: `${createdItems.length} item(s) added to purchase list.`,
-      type: NotificationType.ITEM_MOVED_TO_PURCHASE,
-    });
-    await this.notificationsService.notifyByRoles([Role.ADMIN, Role.PROCUREMENT], {
-      title: 'Purchase list ready',
-      message: 'A purchase list has been updated with new items.',
-      type: NotificationType.PURCHASE_LIST_READY,
-    });
+    await this.notificationsService.notifyByRoles(
+      [Role.ADMIN, Role.PROCUREMENT],
+      {
+        title: 'Items moved to purchase list',
+        message: `${createdItems.length} item(s) added to purchase list.`,
+        type: NotificationType.ITEM_MOVED_TO_PURCHASE,
+      },
+    );
+    await this.notificationsService.notifyByRoles(
+      [Role.ADMIN, Role.PROCUREMENT],
+      {
+        title: 'Purchase list ready',
+        message: 'A purchase list has been updated with new items.',
+        type: NotificationType.PURCHASE_LIST_READY,
+      },
+    );
 
     await this.realtimeService.emitListItemsChanged();
     return createdItems.map(formatListItem);
@@ -441,7 +472,9 @@ export class ListItemsService {
     let acquiredListId = dto.acquiredListId;
     if (!acquiredListId) {
       if (!dto.newAcquiredList?.name) {
-        throw new BadRequestException('Provide acquiredListId or newAcquiredList.name');
+        throw new BadRequestException(
+          'Provide acquiredListId or newAcquiredList.name',
+        );
       }
       const list = await this.prisma.workflowList.create({
         data: {
@@ -476,7 +509,7 @@ export class ListItemsService {
 
         const copy = await tx.listItem.create({
           data: {
-            listId: acquiredListId!,
+            listId: acquiredListId,
             productId: source.productId,
             quantity: source.quantity,
             costPrice: source.costPrice,
@@ -496,7 +529,7 @@ export class ListItemsService {
           data: {
             productId: source.productId,
             fromListId: source.listId,
-            toListId: acquiredListId!,
+            toListId: acquiredListId,
             listItemId: copy.id,
             action: MovementAction.MOVED_FORWARD,
             movedById: userId,
@@ -515,7 +548,11 @@ export class ListItemsService {
         entityType: EntityType.ListItem,
         entityId: item.id,
         entitySku: item.product.sku,
-        newValue: { from: 'PURCHASE', to: 'ACQUIRED', item: formatListItem(item) },
+        newValue: {
+          from: 'PURCHASE',
+          to: 'ACQUIRED',
+          item: formatListItem(item),
+        },
       });
     }
 
@@ -527,11 +564,14 @@ export class ListItemsService {
         type: NotificationType.ACQUIRED_LIST_READY,
       },
     );
-    await this.notificationsService.notifyByRoles([Role.ADMIN, Role.PROCUREMENT], {
-      title: 'Items moved to acquired',
-      message: `${createdItems.length} item(s) acquired.`,
-      type: NotificationType.ITEM_MOVED_TO_ACQUIRED,
-    });
+    await this.notificationsService.notifyByRoles(
+      [Role.ADMIN, Role.PROCUREMENT],
+      {
+        title: 'Items moved to acquired',
+        message: `${createdItems.length} item(s) acquired.`,
+        type: NotificationType.ITEM_MOVED_TO_ACQUIRED,
+      },
+    );
 
     await this.realtimeService.emitListItemsChanged();
     return createdItems.map(formatListItem);
@@ -596,7 +636,9 @@ export class ListItemsService {
       throw new NotFoundException('List item not found');
     }
     if (userRole === Role.INVENTORY && item.list.type !== ListType.ACQUIRED) {
-      throw new ForbiddenException('Inventory staff can only view acquired list lineage');
+      throw new ForbiddenException(
+        'Inventory staff can only view acquired list lineage',
+      );
     }
 
     const ancestors: ReturnType<typeof formatListItem>[] = [];
@@ -627,7 +669,9 @@ export class ListItemsService {
   async findOne(id: string, userRole: Role) {
     const item = await this.getActiveItem(id);
     if (userRole === Role.INVENTORY && item.list.type !== ListType.ACQUIRED) {
-      throw new ForbiddenException('Inventory staff can only access acquired list items');
+      throw new ForbiddenException(
+        'Inventory staff can only access acquired list items',
+      );
     }
     return formatListItem(item);
   }

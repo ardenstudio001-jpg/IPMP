@@ -16,8 +16,20 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { ListItemsService } from './list-items.service';
 
 const baseParties = [
-  { id: 'p1', listItemId: 'item-1', name: 'ABC Supplier', role: PartyRole.SOURCE, createdAt: new Date() },
-  { id: 'p2', listItemId: 'item-1', name: 'Spintex Branch', role: PartyRole.REQUESTED_BY, createdAt: new Date() },
+  {
+    id: 'p1',
+    listItemId: 'item-1',
+    name: 'ABC Supplier',
+    role: PartyRole.SOURCE,
+    createdAt: new Date(),
+  },
+  {
+    id: 'p2',
+    listItemId: 'item-1',
+    name: 'Spintex Branch',
+    role: PartyRole.REQUESTED_BY,
+    createdAt: new Date(),
+  },
 ];
 
 const baseItem = {
@@ -36,8 +48,25 @@ const baseItem = {
   removedAt: null,
   removedById: null,
   createdAt: new Date(),
-  list: { id: 'list-proc', type: ListType.PROCUREMENT, name: 'Daily', createdAt: new Date(), createdById: 'u1' },
-  product: { id: 'prod-1', sku: 'SKU-1', name: 'Pump', category: { id: 'c1', name: 'General', createdAt: new Date() }, procurementType: 'LOCAL', unit: 'pcs', imageUrl: null, productDetails: null, description: null, createdAt: new Date() },
+  list: {
+    id: 'list-proc',
+    type: ListType.PROCUREMENT,
+    name: 'Daily',
+    createdAt: new Date(),
+    createdById: 'u1',
+  },
+  product: {
+    id: 'prod-1',
+    sku: 'SKU-1',
+    name: 'Pump',
+    category: { id: 'c1', name: 'General', createdAt: new Date() },
+    procurementType: 'LOCAL',
+    unit: 'pcs',
+    imageUrl: null,
+    productDetails: null,
+    description: null,
+    createdAt: new Date(),
+  },
   parties: baseParties,
   parentItem: null,
 };
@@ -93,8 +122,14 @@ describe('ListItemsService', () => {
         { provide: ProductsService, useValue: {} },
         { provide: PricingService, useValue: { calculatePricing: jest.fn() } },
         { provide: AuditService, useValue: { logAction: jest.fn() } },
-        { provide: NotificationsService, useValue: { notifyByRoles: jest.fn() } },
-        { provide: RealtimeService, useValue: { emitListItemsChanged: jest.fn() } },
+        {
+          provide: NotificationsService,
+          useValue: { notifyByRoles: jest.fn() },
+        },
+        {
+          provide: RealtimeService,
+          useValue: { emitListItemsChanged: jest.fn() },
+        },
       ],
     }).compile();
 

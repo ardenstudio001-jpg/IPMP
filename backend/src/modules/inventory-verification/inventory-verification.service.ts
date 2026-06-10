@@ -34,7 +34,9 @@ export class InventoryVerificationService {
 
   private assertInventoryRole(role: Role) {
     if (role !== Role.ADMIN && role !== Role.INVENTORY) {
-      throw new ForbiddenException('Only inventory staff can verify acquired items');
+      throw new ForbiddenException(
+        'Only inventory staff can verify acquired items',
+      );
     }
   }
 
@@ -67,7 +69,9 @@ export class InventoryVerificationService {
       throw new NotFoundException('List item not found');
     }
     if (item.list.type !== ListType.ACQUIRED) {
-      throw new BadRequestException('Verification is only for acquired list items');
+      throw new BadRequestException(
+        'Verification is only for acquired list items',
+      );
     }
     if (item.status === ListItemStatus.REMOVED) {
       throw new BadRequestException('Cannot verify a removed item');
@@ -129,11 +133,14 @@ export class InventoryVerificationService {
         : NotificationType.VERIFICATION_MISMATCH;
 
     if (status !== VerificationStatus.MATCHED) {
-      await this.notificationsService.notifyByRoles([Role.ADMIN, Role.INVENTORY], {
-        title: 'Verification mismatch',
-        message: `Verification for ${item.product.name} (${item.product.sku}): ${status}.`,
-        type: NotificationType.VERIFICATION_MISMATCH,
-      });
+      await this.notificationsService.notifyByRoles(
+        [Role.ADMIN, Role.INVENTORY],
+        {
+          title: 'Verification mismatch',
+          message: `Verification for ${item.product.name} (${item.product.sku}): ${status}.`,
+          type: NotificationType.VERIFICATION_MISMATCH,
+        },
+      );
     } else {
       await this.notificationsService.notifyByRoles([Role.ADMIN], {
         title: 'Verification completed',
@@ -146,7 +153,12 @@ export class InventoryVerificationService {
     return verification;
   }
 
-  async update(id: string, userId: string, role: Role, dto: UpdateVerificationDto) {
+  async update(
+    id: string,
+    userId: string,
+    role: Role,
+    dto: UpdateVerificationDto,
+  ) {
     this.assertInventoryRole(role);
     const existing = await this.prisma.inventoryVerification.findUnique({
       where: { id },
@@ -210,11 +222,14 @@ export class InventoryVerificationService {
       status === VerificationStatus.MISSING ||
       status === VerificationStatus.DAMAGED
     ) {
-      await this.notificationsService.notifyByRoles([Role.ADMIN, Role.PROCUREMENT], {
-        title: 'Verification mismatch',
-        message: `Updated verification status: ${status}.`,
-        type: NotificationType.VERIFICATION_MISMATCH,
-      });
+      await this.notificationsService.notifyByRoles(
+        [Role.ADMIN, Role.PROCUREMENT],
+        {
+          title: 'Verification mismatch',
+          message: `Updated verification status: ${status}.`,
+          type: NotificationType.VERIFICATION_MISMATCH,
+        },
+      );
     }
 
     await this.realtimeService.emitVerificationsChanged();
@@ -223,7 +238,9 @@ export class InventoryVerificationService {
 
   async findAll(query: ListVerificationsQueryDto, role: Role) {
     if (role === Role.PROCUREMENT) {
-      throw new ForbiddenException('Procurement staff cannot view verifications');
+      throw new ForbiddenException(
+        'Procurement staff cannot view verifications',
+      );
     }
 
     const page = query.page ?? 1;

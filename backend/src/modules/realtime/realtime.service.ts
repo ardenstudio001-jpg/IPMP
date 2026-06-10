@@ -29,12 +29,9 @@ export class RealtimeService {
   subscribe(userId: string): Observable<MessageEvent> {
     return this.bus.asObservable().pipe(
       filter((message) => message.userId === userId),
-      map(
-        (message) =>
-          ({
-            data: JSON.stringify(message.event),
-          }) as MessageEvent,
-      ),
+      map((message) => ({
+        data: JSON.stringify(message.event),
+      })),
     );
   }
 

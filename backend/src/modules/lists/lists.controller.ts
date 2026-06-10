@@ -32,10 +32,7 @@ export class ListsController {
   }
 
   @Get()
-  findAll(
-    @Query() query: ListListsQueryDto,
-    @GetUser('role') role: Role,
-  ) {
+  findAll(@Query() query: ListListsQueryDto, @GetUser('role') role: Role) {
     return this.listsService.findAll(query, role);
   }
 

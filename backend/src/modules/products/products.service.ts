@@ -149,7 +149,9 @@ export class ProductsService {
         ...(dto.productDetails !== undefined
           ? { productDetails: dto.productDetails }
           : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.description !== undefined
+          ? { description: dto.description }
+          : {}),
         ...(dto.unit !== undefined ? { unit: dto.unit.trim() } : {}),
       },
       include: productInclude,

@@ -53,7 +53,9 @@ export class CategoriesService {
     const old = await this.findOne(id);
     const name = dto.name.trim();
     if (name !== old.name) {
-      const conflict = await this.prisma.category.findUnique({ where: { name } });
+      const conflict = await this.prisma.category.findUnique({
+        where: { name },
+      });
       if (conflict) {
         throw new ConflictException('Category name already exists');
       }
