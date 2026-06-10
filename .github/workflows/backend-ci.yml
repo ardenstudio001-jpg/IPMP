@@ -45,8 +45,8 @@ jobs:
       # ─────────────────────────────────────────
       # DATABASE MIGRATIONS (NEW - IMPORTANT)
       # ─────────────────────────────────────────
-      # - name: Run Prisma migrations
-      #   run: pnpm prisma migrate deploy
+      - name: Run Prisma migrations
+        run: pnpm prisma migrate deploy
 
       # - name: Generate Prisma client
       #   run: pnpm prisma generate

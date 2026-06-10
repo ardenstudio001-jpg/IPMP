@@ -80,7 +80,7 @@ export class PricingService {
     };
   }
 
-  async findAll() {
+  async findAll()  {
     return await this.prisma.pricingSetting.findMany({
       orderBy: { createdAt: 'desc' },
     });
