@@ -32,11 +32,7 @@ async function main() {
   const categoryCount = await prisma.category.count();
   if (categoryCount === 0) {
     await prisma.category.createMany({
-      data: [
-        { name: 'General' },
-        { name: 'Grocery' },
-        { name: 'Hardware' },
-      ],
+      data: [{ name: 'General' }, { name: 'Grocery' }, { name: 'Hardware' }],
     });
     console.log('Seeded sample categories.');
   }
